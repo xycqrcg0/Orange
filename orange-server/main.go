@@ -48,6 +48,13 @@ func handle(conn net.Conn) {
 }
 
 func main() {
+	//先把切片初始化，ODB文件里的数据先写入
+	OStrings = make([]OString, 0)
+	OLists = make([]OList, 0)
+	OHashes = make([]OHash, 0)
+	OSets = make([]OSet, 0)
+	OZSets = make([]OZSet, 0)
+
 	//监听端口
 	tcpSocket, err := net.Listen("tcp", "127.0.0.1:9979")
 	if err != nil {
