@@ -1,4 +1,4 @@
-package orange
+package main
 
 import (
 	"bytes"

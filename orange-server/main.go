@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"orange"
 )
 
 func handle(conn net.Conn) {
@@ -29,12 +28,14 @@ func handle(conn net.Conn) {
 			log.Println("读取失败,", err)
 			break
 		}
-		n, point, commands := orange.ParseMsg(buf[p:])
+		n, point, commands := ParseMsg(buf[p:])
+		log.Println(n)
 		if point != 0 {
 			p = point
 			copy([]byte(commands[n-1]), buf)
 		}
-		fmt.Println(commands)
+		fmt.Println(commands[0])
+		fmt.Println(commands[1])
 	}
 }
 

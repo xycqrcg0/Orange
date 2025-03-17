@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"orange"
 )
 
 func dealCommand() {
@@ -20,14 +19,14 @@ func main() {
 
 	defer conn.Close()
 
-	msg1 := orange.GenerateMsg("message from client")
+	msg1 := GenerateMsg("message from client")
 	_, err = conn.Write(msg1)
 	if err != nil {
 		log.Println("信息发送失败")
 		return
 		//continue
 	}
-	msg2 := orange.GenerateMsg("message from client")
+	msg2 := GenerateMsg("message from client")
 	_, err = conn.Write(msg2)
 	if err != nil {
 		log.Println("信息发送失败")
