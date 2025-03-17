@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"orange"
 )
 
 func handle(conn net.Conn) {
@@ -13,13 +14,14 @@ func handle(conn net.Conn) {
 	//缓冲区
 	buf := make([]byte, 1024)
 	reader := bufio.NewReader(conn)
+	p := 0
 	for {
 		//写入缓冲区
-		n, err := reader.Read(buf[:])
+		m, err := reader.Read(buf[p:])
 		if err != nil {
 			if err == io.EOF {
-				if n > 0 {
-					data := string(buf[:n])
+				if m > 0 {
+					data := string(buf[:m])
 					fmt.Println(data)
 				}
 				break
@@ -27,8 +29,12 @@ func handle(conn net.Conn) {
 			log.Println("读取失败,", err)
 			break
 		}
-		data := string(buf[:n])
-		fmt.Println(data)
+		n, point, commands := orange.ParseMsg(buf[p:])
+		if point != 0 {
+			p = point
+			copy([]byte(commands[n-1]), buf)
+		}
+		fmt.Println(commands)
 	}
 }
 
