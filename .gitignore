@@ -1,3 +1,4 @@
 /.idea
 /orange-server/.idea
 /orange-client/.idea
+.gitignore
