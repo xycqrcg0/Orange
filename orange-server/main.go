@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net"
+	commandhandle "orange-server/command-handle"
+	"orange-server/utils"
 )
 
 func handle(conn net.Conn) {
@@ -13,6 +15,7 @@ func handle(conn net.Conn) {
 	//缓冲区
 	buf := make([]byte, 1024)
 	reader := bufio.NewReader(conn)
+	//p记录偏移量
 	p := 0
 	for {
 		//写入缓冲区
@@ -28,14 +31,19 @@ func handle(conn net.Conn) {
 			log.Println("读取失败,", err)
 			break
 		}
-		n, point, commands := ParseMsg(buf[p:])
+		n, point, commands := utils.ParseMsg(buf[p:])
 		log.Println(n)
 		if point != 0 {
+			//有不全信息
 			p = point
 			copy([]byte(commands[n-1]), buf)
+			//不全信息就先不处理
+			commandhandle.CommandsAssign(conn, commands[:n-1])
+			continue
 		}
-		fmt.Println(commands[0])
-		fmt.Println(commands[1])
+		//p置0
+		p = 0
+		commandhandle.CommandsAssign(conn, commands)
 	}
 }
 
