@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 )
 
 func GenerateMsg(body string) []byte {
@@ -25,9 +24,8 @@ func ParseMsg(msg []byte) (n int, p int, contents []string) {
 	//point记录当前读到了msg的哪个位置
 	point := 0
 	contents = make([]string, 0)
-	sumLen := len(msg)
 
-	for point < sumLen {
+	for {
 		l := len(msg[point:])
 		if l < 7 || msg[point] != 0x99 || msg[point+1] != 0x79 {
 			break
@@ -36,9 +34,10 @@ func ParseMsg(msg []byte) (n int, p int, contents []string) {
 		point += 2
 		nByte := bytes.NewBuffer(msg[point : point+4])
 		point += 4
+		var length32 int32
 		var length int
-		binary.Read(nByte, binary.BigEndian, &length)
-		fmt.Println(length)
+		binary.Read(nByte, binary.BigEndian, &length32)
+		length = int(length32)
 
 		if l-6 < length {
 			//该条信息是最后一条，而且不完整

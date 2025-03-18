@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 )
-
-func dealCommand() {
-
-}
 
 func main() {
 	//申请连接
@@ -19,19 +19,38 @@ func main() {
 
 	defer conn.Close()
 
-	msg1 := GenerateMsg("message from client")
-	_, err = conn.Write(msg1)
-	if err != nil {
-		log.Println("信息发送失败")
-		return
-		//continue
-	}
-	msg2 := GenerateMsg("message from client")
-	_, err = conn.Write(msg2)
-	if err != nil {
-		log.Println("信息发送失败")
-		return
-		//continue
+	readerIn := bufio.NewReader(os.Stdin)
+
+	buf := make([]byte, 1024)
+	readerOut := bufio.NewReader(conn)
+
+	for {
+		command, _ := readerIn.ReadString('\n')
+		msg := GenerateMsg(command[:len(command)-1])
+		conn.Write(msg)
+
+		if command == "exit\n" {
+			fmt.Println("ByeBye~")
+			break
+		}
+
+		m, err := readerOut.Read(buf[:])
+		if err != nil {
+			if err == io.EOF {
+				if m > 0 {
+					da := string(buf[:m])
+					fmt.Println(da)
+					fmt.Println("---数据库连接断开---")
+				}
+				break
+			}
+			fmt.Println("---!异常!---")
+			break
+		}
+		_, _, contents := ParseMsg(buf[:])
+		for _, content := range contents {
+			fmt.Println(content)
+		}
 	}
 
 }

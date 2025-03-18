@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	commandhandle "orange-server/command-handle"
+	"orange-server/data"
 	"orange-server/utils"
 )
 
@@ -23,8 +24,8 @@ func handle(conn net.Conn) {
 		if err != nil {
 			if err == io.EOF {
 				if m > 0 {
-					data := string(buf[:m])
-					fmt.Println(data)
+					da := string(buf[:m])
+					fmt.Println(da)
 				}
 				break
 			}
@@ -32,7 +33,6 @@ func handle(conn net.Conn) {
 			break
 		}
 		n, point, commands := utils.ParseMsg(buf[p:])
-		log.Println(n)
 		if point != 0 {
 			//有不全信息
 			p = point
@@ -48,12 +48,14 @@ func handle(conn net.Conn) {
 }
 
 func main() {
-	//先把切片初始化，ODB文件里的数据先写入
-	OStrings = make([]OString, 0)
-	OLists = make([]OList, 0)
-	OHashes = make([]OHash, 0)
-	OSets = make([]OSet, 0)
-	OZSets = make([]OZSet, 0)
+	//先把哈希初始化，ODB文件里的数据先写入
+	//初始先搞个1024
+	data.Database = &data.Base{
+		Sum:    0,
+		Length: 1024,
+		Max:    0,
+		Data:   make([]*data.ONode, 1024),
+	}
 
 	//监听端口
 	tcpSocket, err := net.Listen("tcp", "127.0.0.1:9979")
