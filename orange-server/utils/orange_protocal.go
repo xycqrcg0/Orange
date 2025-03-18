@@ -6,16 +6,21 @@ import (
 	"log"
 )
 
-func GenerateMsg(body string) []byte {
-	n := len(body)
+func GenerateMsg(bodies ...string) []byte {
+	var n int
 	var nByte [4]byte
-	nByte[3] = byte(n)
-	nByte[2] = byte(n >> 8)
-	nByte[1] = byte(n >> 16)
-	nByte[0] = byte(n >> 32)
 	msg := make([]byte, 0)
+	//先占位
 	msg = append(msg, 0x99, 0x79, nByte[0], nByte[1], nByte[2], nByte[3])
-	msg = append(msg, []byte(body)...)
+	for _, body := range bodies {
+		msg = append(msg, []byte(body)...)
+		msg = append(msg, byte('\n'))
+		n += len(body) + 1
+	}
+	msg[5] = byte(n)
+	msg[4] = byte(n >> 8)
+	msg[3] = byte(n >> 16)
+	msg[2] = byte(n >> 32)
 	return msg
 }
 

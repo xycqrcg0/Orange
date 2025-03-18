@@ -121,3 +121,154 @@ func Lindex(conn net.Conn, key string, index int) {
 	msg := protocalutils.GenerateMsg("key is not existed")
 	conn.Write(msg)
 }
+
+func Popr(conn net.Conn, key string) {
+	node := data.Database.Find([]byte(key))
+	if node != nil {
+		//该key存在，再确定value是list类型
+		valueList, ok := node.Value.(*models.OListNode)
+		if !ok {
+			msg := protocalutils.GenerateMsg("the key has been used by other type")
+			conn.Write(msg)
+			return
+		}
+		//右移
+		q := valueList.Right
+		if q == nil {
+			//也就是说当前这个就是最右边的量（害，麻烦，还要注意修改database里存储的值）
+			p := valueList.Left
+			if p == nil {
+				//嘶，那么这个值就是列表里唯一的值，删了
+				data.Database.Delete([]byte(key))
+			} else {
+				p.Right = nil
+				node.Value = p
+			}
+			msg := protocalutils.GenerateMsg("ok, pop 1 value")
+			conn.Write(msg)
+			return
+		}
+		for q.Right != nil {
+			valueList = valueList.Right
+			q = q.Right
+		}
+		//此时q就是最右端的value，那就把从右数第二个的right指针置为nil
+		valueList.Right = nil
+
+		msg := protocalutils.GenerateMsg("ok, pop 1 value")
+		conn.Write(msg)
+		return
+	} else {
+		//该key不存在
+		msg := protocalutils.GenerateMsg("key is not existed")
+		conn.Write(msg)
+		return
+	}
+}
+
+func Popl(conn net.Conn, key string) {
+	node := data.Database.Find([]byte(key))
+	if node != nil {
+		//该key存在，再确定value是list类型
+		valueList, ok := node.Value.(*models.OListNode)
+		if !ok {
+			msg := protocalutils.GenerateMsg("the key has been used by other type")
+			conn.Write(msg)
+			return
+		}
+		//左移
+		p := valueList.Left
+		if p == nil {
+			//也就是说当前这个就是最左边的量（一样，要注意修改database里存储的值）
+			q := valueList.Right
+			if q == nil {
+				//嘶，那么这个值就是列表里唯一的值，删了
+				data.Database.Delete([]byte(key))
+			} else {
+				q.Left = nil
+				node.Value = q
+			}
+			msg := protocalutils.GenerateMsg("ok, pop 1 value")
+			conn.Write(msg)
+			return
+		}
+		for p.Left != nil {
+			valueList = valueList.Left
+			p = p.Left
+		}
+		//此时p就是最左端的value，那就把从左数第二个的left指针置为nil
+		valueList.Left = nil
+
+		msg := protocalutils.GenerateMsg("ok, pop 1 value")
+		conn.Write(msg)
+		return
+	} else {
+		//该key不存在
+		msg := protocalutils.GenerateMsg("key is not existed")
+		conn.Write(msg)
+		return
+	}
+}
+
+// Lrange 从start开始读，到stop（stop数据不读取）
+func Lrange(conn net.Conn, key string, start int, stop int) {
+	if start >= stop || start < 0 {
+		msg := protocalutils.GenerateMsg("invalid index")
+		conn.Write(msg)
+		return
+	}
+
+	node := data.Database.Find([]byte(key))
+	if node != nil {
+		//该key存在，再确定value是list类型
+		valueList, ok := node.Value.(*models.OListNode)
+		if !ok {
+			msg := protocalutils.GenerateMsg("the key has been used by other type")
+			conn.Write(msg)
+			return
+		}
+		//移到最左边
+		for valueList.Left != nil {
+			valueList = valueList.Left
+		}
+
+		searchRange := stop - start
+
+		//再右移到start处
+		for start > 0 {
+			if valueList == nil {
+				break
+			}
+			valueList = valueList.Right
+			start--
+		}
+		if start != 0 {
+			msg := protocalutils.GenerateMsg("invalid index")
+			conn.Write(msg)
+			return
+		}
+
+		values := make([]string, 0)
+
+		for searchRange > 0 {
+			values = append(values, string(valueList.Content.Buf[:valueList.Content.Length]))
+			valueList = valueList.Right
+			searchRange--
+		}
+		if searchRange != 0 {
+			msg := protocalutils.GenerateMsg("invalid index")
+			conn.Write(msg)
+			return
+		}
+
+		msg := protocalutils.GenerateMsg(values...)
+		conn.Write(msg)
+		return
+
+	} else {
+		//该key不存在
+		msg := protocalutils.GenerateMsg("key is not existed")
+		conn.Write(msg)
+		return
+	}
+}
