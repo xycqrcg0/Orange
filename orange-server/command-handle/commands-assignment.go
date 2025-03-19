@@ -73,21 +73,26 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			stop, _ := strconv.Atoi(params[3])
 			Lrange(conn, params[1], start, stop)
 			return
-			//case patterns["hset"].MatchString(command):
-			//	params := patterns["hset"].FindStringSubmatch(command)
-			//	return
-			//case patterns["hget"].MatchString(command):
-			//	params := patterns["hget"].FindStringSubmatch(command)
-			//	return
-			//case patterns["sadd"].MatchString(command):
-			//	params := patterns["sadd"].FindStringSubmatch(command)
-			//	return
-			//case patterns["smembers"].MatchString(command):
-			//	params := patterns["smembers"].FindStringSubmatch(command)
-			//	return
-			//case patterns["srem"].MatchString(command):
-			//	params := patterns["srem"].FindStringSubmatch(command)
-			//	return
+		case patterns["hset"].MatchString(command):
+			params := patterns["hset"].FindStringSubmatch(command)
+			Hset(conn, params[1], params[2], params[3])
+			return
+		case patterns["hget"].MatchString(command):
+			params := patterns["hget"].FindStringSubmatch(command)
+			Hget(conn, params[1], params[2])
+			return
+		case patterns["sadd"].MatchString(command):
+			params := patterns["sadd"].FindStringSubmatch(command)
+			Sadd(conn, params[1], params[2])
+			return
+		case patterns["smembers"].MatchString(command):
+			params := patterns["smembers"].FindStringSubmatch(command)
+			Smembers(conn, params[1])
+			return
+		case patterns["srem"].MatchString(command):
+			params := patterns["srem"].FindStringSubmatch(command)
+			Srem(conn, params[1], params[2])
+			return
 		}
 
 		Invalid(conn)

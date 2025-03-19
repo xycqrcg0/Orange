@@ -17,7 +17,7 @@ type ONode struct {
 type Base struct {
 	Sum    int //当前存放数据量
 	Length int //data数组长度
-	Max    int //最大位
+	Max    int //最大位(目前只是摆设)
 	Data   []*ONode
 }
 
@@ -83,6 +83,7 @@ func (base *Base) Delete(byteKey []byte) bool {
 			if string(q.Key.Buf[:q.Key.Length]) == key {
 				p.Next = q.Next
 				//跳过的那个元素相当于被删除，go的GC机制应该会把它删了
+				base.Sum--
 				return true
 			}
 			p = p.Next
@@ -92,6 +93,7 @@ func (base *Base) Delete(byteKey []byte) bool {
 		//data[hashKey]:[p]
 		if string(p.Key.Buf[:p.Key.Length]) == key {
 			base.Data[hashKey] = nil
+			base.Sum--
 			//同理
 			return true
 		}

@@ -7,18 +7,25 @@ import (
 	protocalutils "orange-server/utils"
 )
 
+// OListNode 芝士value(list)
+type OListNode struct {
+	Content *models.SDS
+	Left    *OListNode
+	Right   *OListNode
+}
+
 //OList的存储，放进database的value是第一个插入的值
 
 // Addr 右侧插入
 func Addr(conn net.Conn, key string, value string) {
-	newListNode := &models.OListNode{Left: nil, Right: nil}
+	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，只要value是list类型，就插入，不然报错
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
@@ -49,14 +56,14 @@ func Addr(conn net.Conn, key string, value string) {
 
 // Addl 左侧插入
 func Addl(conn net.Conn, key string, value string) {
-	newListNode := &models.OListNode{Left: nil, Right: nil}
+	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，只要value是list类型，就插入，不然报错
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
@@ -90,7 +97,7 @@ func Lindex(conn net.Conn, key string, index int) {
 	//诶诶诶，就简单粗暴一点了
 	node := data.Database.Find([]byte(key))
 	if node != nil {
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key is used by other type")
 			conn.Write(msg)
@@ -126,7 +133,7 @@ func Popr(conn net.Conn, key string) {
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
@@ -170,7 +177,7 @@ func Popl(conn net.Conn, key string) {
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
@@ -221,7 +228,7 @@ func Lrange(conn net.Conn, key string, start int, stop int) {
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
-		valueList, ok := node.Value.(*models.OListNode)
+		valueList, ok := node.Value.(*OListNode)
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
