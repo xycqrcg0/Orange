@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	commandhandle "orange-server/command-handle"
-	"orange-server/data"
 	"orange-server/utils"
 )
 
@@ -48,14 +47,7 @@ func handle(conn net.Conn) {
 }
 
 func main() {
-	//先把哈希初始化，ODB文件里的数据先写入
-	//初始先搞个1024
-	data.Database = &data.Base{
-		Sum:    0,
-		Length: 1024,
-		Max:    0,
-		Data:   make([]*data.ONode, 1024),
-	}
+	Init()
 
 	//监听端口
 	tcpSocket, err := net.Listen("tcp", "127.0.0.1:9979")
