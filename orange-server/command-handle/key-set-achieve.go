@@ -17,7 +17,7 @@ type OSet struct {
 	Value  []*models.SDS
 }
 
-func Sadd(conn net.Conn, key string, value string) {
+func Sadd(conn net.Conn, key string, value string) bool {
 	valuesds := models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
@@ -28,7 +28,7 @@ func Sadd(conn net.Conn, key string, value string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 
 		h := fnv.New32a()
@@ -40,7 +40,7 @@ func Sadd(conn net.Conn, key string, value string) {
 			//因为set要求字符串是唯一的，那么当前这种情况是不被允许的（hash可以很快发现这个问题，这也是用哈希表实现的原因）
 			msg := protocalutils.GenerateMsg("value has been existed")
 			conn.Write(msg)
-			return
+			return false
 		} else {
 			//这就可以放了
 			valueOSet.Value[hashed] = valuesds
@@ -71,7 +71,7 @@ func Sadd(conn net.Conn, key string, value string) {
 
 	msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 	conn.Write(msg)
-	return
+	return true
 }
 
 func Smembers(conn net.Conn, key string) {
@@ -101,7 +101,7 @@ func Smembers(conn net.Conn, key string) {
 	}
 }
 
-func Srem(conn net.Conn, key string, value string) {
+func Srem(conn net.Conn, key string, value string) bool {
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
@@ -110,7 +110,7 @@ func Srem(conn net.Conn, key string, value string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 
 		h := fnv.New32a()
@@ -121,7 +121,7 @@ func Srem(conn net.Conn, key string, value string) {
 		if valueOSet.Value[hashed] == nil {
 			msg := protocalutils.GenerateMsg("value is not existed")
 			conn.Write(msg)
-			return
+			return false
 		}
 
 		valueOSet.Value[hashed] = nil
@@ -131,11 +131,11 @@ func Srem(conn net.Conn, key string, value string) {
 
 		msg := protocalutils.GenerateMsg("ok, 1 value has been deleted")
 		conn.Write(msg)
-		return
+		return true
 
 	} else {
 		msg := protocalutils.GenerateMsg("key is not existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 }

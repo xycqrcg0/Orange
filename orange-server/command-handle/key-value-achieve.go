@@ -12,17 +12,17 @@ func Invalid(conn net.Conn) {
 	conn.Write(msg)
 }
 
-func Set(conn net.Conn, key string, value string) {
+func Set(conn net.Conn, key string, value string) bool {
 	keysds := models.NewSDS([]byte(key))
 	valuesds := models.NewSDS([]byte(value))
 	if !data.Database.PushIn(*keysds, valuesds) {
 		msg := protocalutils.GenerateMsg("key has existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 	msg := protocalutils.GenerateMsg("ok,1 key-value has been stored")
 	conn.Write(msg)
-	return
+	return true
 }
 
 func Get(conn net.Conn, key string) {
@@ -42,21 +42,22 @@ func Get(conn net.Conn, key string) {
 	}
 	msg := protocalutils.GenerateMsg(string(value.Buf))
 	conn.Write(msg)
+	return
 }
 
-func Delete(conn net.Conn, key string) {
+func Delete(conn net.Conn, key string) bool {
 	//同样问题，如果不是key-value里的key，就不删了，返回未找到
 	node := data.Database.Find([]byte(key))
 	if node == nil {
 		msg := protocalutils.GenerateMsg("key is not existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 	_, ok := node.Value.(*models.SDS)
 	if !ok {
 		msg := protocalutils.GenerateMsg("key is not existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 
 	//key不存在才会返回false，这里就不检查了
@@ -64,4 +65,5 @@ func Delete(conn net.Conn, key string) {
 
 	msg := protocalutils.GenerateMsg("ok, 1 key has been deleted")
 	conn.Write(msg)
+	return true
 }

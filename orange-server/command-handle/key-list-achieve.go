@@ -17,7 +17,7 @@ type OListNode struct {
 //OList的存储，放进database的value是最左边的值
 
 // Addr 右侧插入
-func Addr(conn net.Conn, key string, value string) {
+func Addr(conn net.Conn, key string, value string) bool {
 	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
@@ -29,7 +29,7 @@ func Addr(conn net.Conn, key string, value string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 		//右侧插入
 		for valueList.Right != nil {
@@ -41,7 +41,7 @@ func Addr(conn net.Conn, key string, value string) {
 
 		msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		conn.Write(msg)
-		return
+		return true
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
@@ -50,12 +50,12 @@ func Addr(conn net.Conn, key string, value string) {
 
 		msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		conn.Write(msg)
-		return
+		return true
 	}
 }
 
 // Addl 左侧插入
-func Addl(conn net.Conn, key string, value string) {
+func Addl(conn net.Conn, key string, value string) bool {
 	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
@@ -67,7 +67,7 @@ func Addl(conn net.Conn, key string, value string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 		//左侧插入
 		for valueList.Left != nil {
@@ -82,7 +82,7 @@ func Addl(conn net.Conn, key string, value string) {
 
 		msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		conn.Write(msg)
-		return
+		return true
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
@@ -91,7 +91,7 @@ func Addl(conn net.Conn, key string, value string) {
 
 		msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		conn.Write(msg)
-		return
+		return true
 	}
 }
 
@@ -129,9 +129,10 @@ func Lindex(conn net.Conn, key string, index int) {
 	}
 	msg := protocalutils.GenerateMsg("key is not existed")
 	conn.Write(msg)
+	return
 }
 
-func Popr(conn net.Conn, key string) {
+func Popr(conn net.Conn, key string) bool {
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
@@ -139,7 +140,7 @@ func Popr(conn net.Conn, key string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 		//右移
 		q := valueList.Right
@@ -155,7 +156,7 @@ func Popr(conn net.Conn, key string) {
 			}
 			msg := protocalutils.GenerateMsg("ok, pop 1 value")
 			conn.Write(msg)
-			return
+			return true
 		}
 		for q.Right != nil {
 			valueList = valueList.Right
@@ -166,16 +167,16 @@ func Popr(conn net.Conn, key string) {
 
 		msg := protocalutils.GenerateMsg("ok, pop 1 value")
 		conn.Write(msg)
-		return
+		return true
 	} else {
 		//该key不存在
 		msg := protocalutils.GenerateMsg("key is not existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 }
 
-func Popl(conn net.Conn, key string) {
+func Popl(conn net.Conn, key string) bool {
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
@@ -183,7 +184,7 @@ func Popl(conn net.Conn, key string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 
 		//valueList是最左端的值
@@ -197,12 +198,12 @@ func Popl(conn net.Conn, key string) {
 		}
 		msg := protocalutils.GenerateMsg("ok, pop 1 value")
 		conn.Write(msg)
-		return
+		return true
 	} else {
 		//该key不存在
 		msg := protocalutils.GenerateMsg("key is not existed")
 		conn.Write(msg)
-		return
+		return false
 	}
 }
 

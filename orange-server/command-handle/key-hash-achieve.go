@@ -23,7 +23,7 @@ type OHash struct {
 	Value  []*OHashNode
 }
 
-func Hset(conn net.Conn, key string, field string, value string) {
+func Hset(conn net.Conn, key string, field string, value string) bool {
 	fieldsds := models.NewSDS([]byte(field))
 	valuesds := models.NewSDS([]byte(value))
 	newHashNode := &OHashNode{Field: *fieldsds, Value: valuesds, Next: nil}
@@ -36,7 +36,7 @@ func Hset(conn net.Conn, key string, field string, value string) {
 		if !ok {
 			msg := protocalutils.GenerateMsg("the key has been used by other type")
 			conn.Write(msg)
-			return
+			return false
 		}
 		//准备把数据放入
 
@@ -58,7 +58,7 @@ func Hset(conn net.Conn, key string, field string, value string) {
 				//那么该field是重复了，报错
 				msg := protocalutils.GenerateMsg("field has been existed")
 				conn.Write(msg)
-				return
+				return false
 			}
 			//在末尾放上
 			p.Next = newHashNode
@@ -93,7 +93,7 @@ func Hset(conn net.Conn, key string, field string, value string) {
 
 	msg := protocalutils.GenerateMsg("ok, 1 field-value has been inserted")
 	conn.Write(msg)
-	return
+	return true
 }
 
 func Hget(conn net.Conn, key string, field string) {

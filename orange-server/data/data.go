@@ -14,6 +14,8 @@ type ONode struct {
 	Next  *ONode
 }
 
+//喵的，把Int当做4字节了···（就当它是吧）
+
 type Base struct {
 	Sum    int //当前存放数据量
 	Length int //data数组长度

@@ -2,14 +2,18 @@ package command_handle
 
 import (
 	"net"
+	datapersistence "orange-server/data-persistence"
 	"regexp"
 	"strconv"
+	"sync/atomic"
 )
 
 //要不要对key和value做一下规范呢？先放放
 //有点粗暴的分配方法~
 
 //嘶~为什么不一开始用正则,丢给ai写表达式······
+
+//分配任务时对Record进行原子操作（毕竟还要并发）,但要注意分辨此任务有没有正确执行
 
 func CommandsAssign(conn net.Conn, commands []string) {
 	patterns := map[string]*regexp.Regexp{
@@ -36,7 +40,9 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		case patterns["set"].MatchString(command):
 			params := patterns["set"].FindStringSubmatch(command)
 			//params里第一个匹配到的是函数名
-			Set(conn, params[1], params[2])
+			if Set(conn, params[1], params[2]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["get"].MatchString(command):
 			params := patterns["get"].FindStringSubmatch(command)
@@ -44,23 +50,33 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			return
 		case patterns["delete"].MatchString(command):
 			params := patterns["delete"].FindStringSubmatch(command)
-			Delete(conn, params[1])
+			if Delete(conn, params[1]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["addr"].MatchString(command):
 			params := patterns["addr"].FindStringSubmatch(command)
-			Addr(conn, params[1], params[2])
+			if Addr(conn, params[1], params[2]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["addl"].MatchString(command):
 			params := patterns["addl"].FindStringSubmatch(command)
-			Addl(conn, params[1], params[2])
+			if Addl(conn, params[1], params[2]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["popr"].MatchString(command):
 			params := patterns["popr"].FindStringSubmatch(command)
-			Popr(conn, params[1])
+			if Popr(conn, params[1]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["popl"].MatchString(command):
 			params := patterns["popl"].FindStringSubmatch(command)
-			Popl(conn, params[1])
+			if Popl(conn, params[1]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["lindex"].MatchString(command):
 			params := patterns["lindex"].FindStringSubmatch(command)
@@ -75,7 +91,9 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			return
 		case patterns["hset"].MatchString(command):
 			params := patterns["hset"].FindStringSubmatch(command)
-			Hset(conn, params[1], params[2], params[3])
+			if Hset(conn, params[1], params[2], params[3]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["hget"].MatchString(command):
 			params := patterns["hget"].FindStringSubmatch(command)
@@ -83,7 +101,9 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			return
 		case patterns["sadd"].MatchString(command):
 			params := patterns["sadd"].FindStringSubmatch(command)
-			Sadd(conn, params[1], params[2])
+			if Sadd(conn, params[1], params[2]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		case patterns["smembers"].MatchString(command):
 			params := patterns["smembers"].FindStringSubmatch(command)
@@ -91,7 +111,9 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			return
 		case patterns["srem"].MatchString(command):
 			params := patterns["srem"].FindStringSubmatch(command)
-			Srem(conn, params[1], params[2])
+			if Srem(conn, params[1], params[2]) {
+				atomic.AddInt64(&datapersistence.Record, 1)
+			}
 			return
 		}
 
