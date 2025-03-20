@@ -10,6 +10,12 @@ import (
 
 // SAVE 阻塞式保存
 func SAVE(conn net.Conn) {
+	if atomic.LoadInt64(&ODBStatus) == 0 {
+		msg := protocalutils.GenerateMsg("ODB is not enabled")
+		conn.Write(msg)
+		return
+	}
+
 	//在此之前要看看当前有没有SAVE进程在执行（相当于锁吧）（原子读取）
 	if atomic.LoadInt64(&SAVEFlag) != 0 {
 		msg := protocalutils.GenerateMsg("please wait,1 (RG)SAVE routine is running")
@@ -40,6 +46,12 @@ func SAVE(conn net.Conn) {
 
 // RGSAVE 非阻塞式保存
 func RGSAVE(conn net.Conn) {
+	if atomic.LoadInt64(&ODBStatus) == 0 {
+		msg := protocalutils.GenerateMsg("ODB is not enabled")
+		conn.Write(msg)
+		return
+	}
+
 	//汗
 	go SAVE(conn)
 	//就害怕并发时该进程写入的msg会破坏结构

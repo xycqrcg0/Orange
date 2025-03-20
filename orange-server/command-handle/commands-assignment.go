@@ -32,6 +32,9 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		"smembers": regexp.MustCompile(`^smembers\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)$`),
 		"srem":     regexp.MustCompile(`^srem\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*,\s*([a-zA-Z0-9_]+)\s*\)$`),
 
+		"aof": regexp.MustCompile(`^(on|off)\s+AOF$`),
+		"odb": regexp.MustCompile(`^(on|off)\s+ODB$`),
+
 		"SAVE":   regexp.MustCompile(`SAVE`),
 		"RGSAVE": regexp.MustCompile(`RGSAVE`),
 		"save":   regexp.MustCompile(`^save\(\s*(\d+)\s*,\s*(\d+)\s*\)$`),
@@ -47,77 +50,201 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			if Set(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			//先确定aof功能有开启
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["get"].MatchString(command):
 			params := patterns["get"].FindStringSubmatch(command)
 			Get(conn, params[1])
 			return
+
 		case patterns["delete"].MatchString(command):
 			params := patterns["delete"].FindStringSubmatch(command)
 			if Delete(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["addr"].MatchString(command):
 			params := patterns["addr"].FindStringSubmatch(command)
 			if Addr(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["addl"].MatchString(command):
 			params := patterns["addl"].FindStringSubmatch(command)
 			if Addl(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["popr"].MatchString(command):
 			params := patterns["popr"].FindStringSubmatch(command)
 			if Popr(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["popl"].MatchString(command):
 			params := patterns["popl"].FindStringSubmatch(command)
 			if Popl(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["lindex"].MatchString(command):
 			params := patterns["lindex"].FindStringSubmatch(command)
 			index, _ := strconv.Atoi(params[2])
 			Lindex(conn, params[1], index)
 			return
+
 		case patterns["lrange"].MatchString(command):
 			params := patterns["lrange"].FindStringSubmatch(command)
 			start, _ := strconv.Atoi(params[2])
 			stop, _ := strconv.Atoi(params[3])
 			Lrange(conn, params[1], start, stop)
 			return
+
 		case patterns["hset"].MatchString(command):
 			params := patterns["hset"].FindStringSubmatch(command)
 			if Hset(conn, params[1], params[2], params[3]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["hget"].MatchString(command):
 			params := patterns["hget"].FindStringSubmatch(command)
 			Hget(conn, params[1], params[2])
 			return
+
 		case patterns["sadd"].MatchString(command):
 			params := patterns["sadd"].FindStringSubmatch(command)
 			if Sadd(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
 			return
+
 		case patterns["smembers"].MatchString(command):
 			params := patterns["smembers"].FindStringSubmatch(command)
 			Smembers(conn, params[1])
 			return
+
 		case patterns["srem"].MatchString(command):
 			params := patterns["srem"].FindStringSubmatch(command)
 			if Srem(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
 			}
+			if atomic.LoadInt64(&AOFStatus) != 0 {
+				msg := utils.GenerateMsg(command)
+				//重写在进行->写入缓冲区；重写未进行->写入文件
+				if atomic.LoadInt64(&AOFFlag) != 0 {
+					WriteInAOFBuf(msg)
+				} else {
+					AOF(msg)
+				}
+			}
+			return
+
+		case patterns["aof"].MatchString(command):
+			params := patterns["aof"].FindStringSubmatch(command)
+			if params[1] == "on" {
+				//如果之前是关的，那么这时候要重写一次aof
+				if atomic.LoadInt64(&AOFStatus) == 0 {
+					atomic.SwapInt64(&AOFStatus, 1)
+					AOFRewrite()
+				}
+			} else {
+				atomic.SwapInt64(&AOFStatus, 0)
+			}
+			msg := utils.GenerateMsg("ok,aof status has changed")
+			conn.Write(msg)
+			return
+		case patterns["odb"].MatchString(command):
+			params := patterns["odb"].FindStringSubmatch(command)
+			if params[1] == "on" {
+				atomic.SwapInt64(&ODBStatus, 1)
+			} else {
+				//如果之前是开的关上自动触发的save
+				if atomic.LoadInt64(&ODBStatus) != 0 {
+					Stop <- true
+					atomic.SwapInt64(&ODBStatus, 0)
+				}
+			}
+			msg := utils.GenerateMsg("ok,odb status has changed")
+			conn.Write(msg)
 			return
 
 		case patterns["SAVE"].MatchString(command):

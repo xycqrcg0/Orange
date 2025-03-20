@@ -21,6 +21,7 @@ func GenerateMsg(bodies ...string) []byte {
 	msg[4] = byte(n >> 8)
 	msg[3] = byte(n >> 16)
 	msg[2] = byte(n >> 32)
+	log.Println(msg)
 	return msg
 }
 

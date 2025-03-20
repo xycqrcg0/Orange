@@ -13,6 +13,8 @@ func Init() {
 
 	command_handle.Stop = make(chan bool)
 
+	command_handle.AOFBuf = make([]byte, 0)
+
 	//初始默认值
 	go command_handle.Save(5, 5)
 }

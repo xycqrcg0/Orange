@@ -11,6 +11,9 @@ import (
 	"os"
 )
 
+// ODBStatus 标识ODB功能是否开启
+var ODBStatus int64
+
 // Record 记录当前改动了几个数据,为save作参考
 var Record int64 = 0
 
@@ -34,7 +37,7 @@ var (
 	start byte = 0xaa
 	end   byte = 0xee
 
-	filePath = "./database.odb"
+	odbFilePath = "./orange.odb"
 )
 
 func intToByte(a int) (b []byte) {
@@ -154,7 +157,7 @@ func WriteODB() error {
 
 	//还是不能先创建文件再构造writeBuf，可能会丢失数据
 
-	file, err := os.Create(filePath)
+	file, err := os.Create(odbFilePath)
 	if err != nil {
 		fmt.Printf("创建文件时出错: %v\n", err)
 		return err
@@ -177,7 +180,7 @@ func ReadODB() error {
 		Data:   make([]*data.ONode, 1024),
 	}
 
-	file, err := os.ReadFile(filePath)
+	file, err := os.ReadFile(odbFilePath)
 	if err != nil {
 		return err
 	}
