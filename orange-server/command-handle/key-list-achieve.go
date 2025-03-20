@@ -14,7 +14,7 @@ type OListNode struct {
 	Right   *OListNode
 }
 
-//OList的存储，放进database的value是第一个插入的值
+//OList的存储，放进database的value是最左边的值
 
 // Addr 右侧插入
 func Addr(conn net.Conn, key string, value string) {
@@ -77,6 +77,9 @@ func Addl(conn net.Conn, key string, value string) {
 		newListNode.Right = valueList
 		valueList.Left = newListNode
 
+		//修改一下database里存的值
+		node.Value = newListNode
+
 		msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		conn.Write(msg)
 		return
@@ -103,9 +106,8 @@ func Lindex(conn net.Conn, key string, index int) {
 			conn.Write(msg)
 			return
 		}
-		for valueList.Left != nil {
-			valueList = valueList.Left
-		}
+
+		//在database里的就是最左边的值
 
 		for index > 0 {
 			if valueList.Right == nil {
@@ -183,29 +185,16 @@ func Popl(conn net.Conn, key string) {
 			conn.Write(msg)
 			return
 		}
-		//左移
-		p := valueList.Left
-		if p == nil {
-			//也就是说当前这个就是最左边的量（一样，要注意修改database里存储的值）
-			q := valueList.Right
-			if q == nil {
-				//嘶，那么这个值就是列表里唯一的值，删了
-				data.Database.Delete([]byte(key))
-			} else {
-				q.Left = nil
-				node.Value = q
-			}
-			msg := protocalutils.GenerateMsg("ok, pop 1 value")
-			conn.Write(msg)
-			return
-		}
-		for p.Left != nil {
-			valueList = valueList.Left
-			p = p.Left
-		}
-		//此时p就是最左端的value，那就把从左数第二个的left指针置为nil
-		valueList.Left = nil
 
+		//valueList是最左端的值
+		q := valueList.Right
+		if q == nil {
+			//嘶，那么这个值就是列表里唯一的值，删了
+			data.Database.Delete([]byte(key))
+		} else {
+			q.Left = nil
+			node.Value = q
+		}
 		msg := protocalutils.GenerateMsg("ok, pop 1 value")
 		conn.Write(msg)
 		return

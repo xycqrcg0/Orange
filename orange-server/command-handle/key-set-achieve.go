@@ -12,9 +12,9 @@ import (
 
 // OSet (芝士value(set))
 type OSet struct {
-	length int
-	sum    int
-	value  []*models.SDS
+	Length int
+	Sum    int
+	Value  []*models.SDS
 }
 
 func Sadd(conn net.Conn, key string, value string) {
@@ -34,18 +34,18 @@ func Sadd(conn net.Conn, key string, value string) {
 		h := fnv.New32a()
 		h.Write([]byte(value))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % valueOSet.length
+		hashed := int(h.Sum32()) % valueOSet.Length
 
-		if valueOSet.value[hashed] != nil {
+		if valueOSet.Value[hashed] != nil {
 			//因为set要求字符串是唯一的，那么当前这种情况是不被允许的（hash可以很快发现这个问题，这也是用哈希表实现的原因）
 			msg := protocalutils.GenerateMsg("value has been existed")
 			conn.Write(msg)
 			return
 		} else {
 			//这就可以放了
-			valueOSet.value[hashed] = valuesds
+			valueOSet.Value[hashed] = valuesds
 			//OSet里的sum 要++
-			valueOSet.sum++
+			valueOSet.Sum++
 		}
 
 	} else {
@@ -53,17 +53,17 @@ func Sadd(conn net.Conn, key string, value string) {
 		keysds := models.NewSDS([]byte(key))
 		//切片先开多大呢？（这是一个问题）先小一点吧
 		newValueOSet := &OSet{
-			length: 128,
-			sum:    0,
-			value:  make([]*models.SDS, 128),
+			Length: 128,
+			Sum:    0,
+			Value:  make([]*models.SDS, 128),
 		}
 
 		h := fnv.New32a()
 		h.Write([]byte(value))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % newValueOSet.length
-		newValueOSet.value[hashed] = valuesds
-		newValueOSet.sum++
+		hashed := int(h.Sum32()) % newValueOSet.Length
+		newValueOSet.Value[hashed] = valuesds
+		newValueOSet.Sum++
 
 		//把newValueOHash往database里放
 		data.Database.PushIn(*keysds, newValueOSet)
@@ -86,7 +86,7 @@ func Smembers(conn net.Conn, key string) {
 			return
 		}
 		values := make([]string, 0)
-		for _, value := range valueOSet.value {
+		for _, value := range valueOSet.Value {
 			if value != nil {
 				values = append(values, string(value.Buf[:value.Length]))
 			}
@@ -116,16 +116,16 @@ func Srem(conn net.Conn, key string, value string) {
 		h := fnv.New32a()
 		h.Write([]byte(value))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % valueOSet.length
+		hashed := int(h.Sum32()) % valueOSet.Length
 
-		if valueOSet.value[hashed] == nil {
+		if valueOSet.Value[hashed] == nil {
 			msg := protocalutils.GenerateMsg("value is not existed")
 			conn.Write(msg)
 			return
 		}
 
-		valueOSet.value[hashed] = nil
-		valueOSet.sum--
+		valueOSet.Value[hashed] = nil
+		valueOSet.Sum--
 
 		//其实真要说这里也是要考虑一下length是不是要缩减()
 

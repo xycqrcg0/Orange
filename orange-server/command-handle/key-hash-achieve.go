@@ -18,9 +18,9 @@ type OHashNode struct {
 
 // OHash (芝士value(hash))
 type OHash struct {
-	length int
-	sum    int
-	value  []*OHashNode
+	Length int
+	Sum    int
+	Value  []*OHashNode
 }
 
 func Hset(conn net.Conn, key string, field string, value string) {
@@ -47,9 +47,9 @@ func Hset(conn net.Conn, key string, field string, value string) {
 		h := fnv.New32a()
 		h.Write([]byte(field))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % valueOHash.length
+		hashed := int(h.Sum32()) % valueOHash.Length
 		//解决哈希冲突
-		p := valueOHash.value[hashed]
+		p := valueOHash.Value[hashed]
 		if p != nil {
 			for p.Next != nil {
 				p = p.Next
@@ -64,28 +64,28 @@ func Hset(conn net.Conn, key string, field string, value string) {
 			p.Next = newHashNode
 		} else {
 			//直接放
-			valueOHash.value[hashed] = newHashNode
+			valueOHash.Value[hashed] = newHashNode
 		}
-		valueOHash.sum++
+		valueOHash.Sum++
 
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
 		//切片先开多大呢？（这是一个问题）先小一点吧
 		newValueOHash := &OHash{
-			length: 128,
-			sum:    0,
-			value:  make([]*OHashNode, 128),
+			Length: 128,
+			Sum:    0,
+			Value:  make([]*OHashNode, 128),
 		}
 
 		//把newHashNode放进newValueHash里,别忘了哈希时不要加上byte后面的空byte（直接用field吧）
 		h := fnv.New32a()
 		h.Write([]byte(field))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % newValueOHash.length
+		hashed := int(h.Sum32()) % newValueOHash.Length
 		//毕竟是新开的切片了，哈希冲突是不存在的
-		newValueOHash.value[hashed] = newHashNode
-		newValueOHash.sum++
+		newValueOHash.Value[hashed] = newHashNode
+		newValueOHash.Sum++
 
 		//把newValueOHash往database里放
 		data.Database.PushIn(*keysds, newValueOHash)
@@ -110,9 +110,9 @@ func Hget(conn net.Conn, key string, field string) {
 		h := fnv.New32a()
 		h.Write([]byte(field))
 		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % valueOHash.length
+		hashed := int(h.Sum32()) % valueOHash.Length
 
-		p := valueOHash.value[hashed]
+		p := valueOHash.Value[hashed]
 		if p != nil {
 			if string(p.Field.Buf[:p.Field.Length]) == field {
 				msg := protocalutils.GenerateMsg(string(p.Value.Buf[:p.Value.Length]))
