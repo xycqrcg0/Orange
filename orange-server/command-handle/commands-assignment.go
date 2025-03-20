@@ -49,15 +49,15 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			//params里第一个匹配到的是函数名
 			if Set(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			//先确定aof功能有开启
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				//先确定aof功能有开启
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -71,14 +71,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["delete"].FindStringSubmatch(command)
 			if Delete(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -87,14 +87,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["addr"].FindStringSubmatch(command)
 			if Addr(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -103,14 +103,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["addl"].FindStringSubmatch(command)
 			if Addl(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -119,14 +119,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["popr"].FindStringSubmatch(command)
 			if Popr(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -135,14 +135,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["popl"].FindStringSubmatch(command)
 			if Popl(conn, params[1]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -164,14 +164,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["hset"].FindStringSubmatch(command)
 			if Hset(conn, params[1], params[2], params[3]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -185,14 +185,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["sadd"].FindStringSubmatch(command)
 			if Sadd(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return
@@ -206,14 +206,14 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["srem"].FindStringSubmatch(command)
 			if Srem(conn, params[1], params[2]) {
 				atomic.AddInt64(&Record, 1)
-			}
-			if atomic.LoadInt64(&AOFStatus) != 0 {
-				msg := utils.GenerateMsg(command)
-				//重写在进行->写入缓冲区；重写未进行->写入文件
-				if atomic.LoadInt64(&AOFFlag) != 0 {
-					WriteInAOFBuf(msg)
-				} else {
-					AOF(msg)
+				if atomic.LoadInt64(&AOFStatus) != 0 {
+					msg := utils.GenerateMsg(command)
+					//重写在进行->写入缓冲区；重写未进行->写入文件
+					if atomic.LoadInt64(&AOFFlag) != 0 {
+						WriteInAOFBuf(msg)
+					} else {
+						AOF(msg[:len(msg)])
+					}
 				}
 			}
 			return

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
 	"orange-server/command-handle"
+	"os"
 )
 
 func Init() {
@@ -17,4 +20,12 @@ func Init() {
 
 	//初始默认值
 	go command_handle.Save(5, 5)
+
+	file, _ := os.Open("./orange.aof")
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println(scanner.Bytes())
+	}
+	file.Close()
+
 }

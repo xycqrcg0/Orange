@@ -50,14 +50,14 @@ func AOFReread() (read []byte) {
 
 			if vv, ok := v.Value.(*models.SDS); ok {
 				value := string(vv.Buf[:vv.Length])
-				command := "set(" + key + "," + value
+				command := "set(" + key + "," + value + ")"
 				msg := utils.GenerateMsg(command)
 				read = append(read, msg...)
 
 			} else if vv, ok := v.Value.(*OListNode); ok {
 				for vv != nil {
 					value := string(vv.Content.Buf[:vv.Content.Length])
-					command := "addr(" + key + "," + value
+					command := "addr(" + key + "," + value + ")"
 					msg := utils.GenerateMsg(command)
 					read = append(read, msg...)
 					vv = vv.Right
@@ -69,7 +69,7 @@ func AOFReread() (read []byte) {
 						for vvf != nil {
 							field := string(vvf.Field.Buf[:vvf.Field.Length])
 							value := string(vvf.Value.Buf[:vvf.Value.Length])
-							command := "hset(" + key + "," + field + "," + value
+							command := "hset(" + key + "," + field + "," + value + ")"
 							msg := utils.GenerateMsg(command)
 							read = append(read, msg...)
 							vvf = vvf.Next
@@ -81,7 +81,7 @@ func AOFReread() (read []byte) {
 				for _, vvv := range vv.Value {
 					if vvv != nil {
 						value := string(vvv.Buf[:vvv.Length])
-						command := "sadd(" + key + "," + value
+						command := "sadd(" + key + "," + value + ")"
 						msg := utils.GenerateMsg(command)
 						read = append(read, msg...)
 					}
@@ -105,6 +105,7 @@ func AOF(msg []byte) {
 		return
 	}
 	//写入
+	log.Println(msg)
 	file.Write(msg)
 	file.Close()
 
@@ -141,12 +142,12 @@ func AOFRewrite() {
 	//检查aof文件是否存在
 	file, err := os.OpenFile(aofFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666) //权限没想好怎么设置
 	if err != nil {
-		log.Println("aof文件打开/创建失败")
+		log.Println("aof文件创建失败")
 		//没想好这里怎么处理
 		return
 	}
 	//写入
-	file.Write(AOFBuf)
+	file.Write(AOFBuf[:len(AOFBuf)])
 	file.Close()
 
 	mtx.Unlock()
