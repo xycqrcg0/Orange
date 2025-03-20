@@ -2,7 +2,7 @@ package command_handle
 
 import (
 	"net"
-	datapersistence "orange-server/data-persistence"
+	"orange-server/utils"
 	"regexp"
 	"strconv"
 	"sync/atomic"
@@ -31,6 +31,10 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		"sadd":     regexp.MustCompile(`^sadd\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*,\s*([a-zA-Z0-9_]+)\s*\)$`),
 		"smembers": regexp.MustCompile(`^smembers\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)$`),
 		"srem":     regexp.MustCompile(`^srem\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*,\s*([a-zA-Z0-9_]+)\s*\)$`),
+
+		"SAVE":   regexp.MustCompile(`SAVE`),
+		"RGSAVE": regexp.MustCompile(`RGSAVE`),
+		"save":   regexp.MustCompile(`^save\(\s*(\d+)\s*,\s*(\d+)\s*\)$`),
 	}
 	//zaddPattern := regexp.MustCompile()
 	//zremPattern := regexp.MustCompile()
@@ -41,7 +45,7 @@ func CommandsAssign(conn net.Conn, commands []string) {
 			params := patterns["set"].FindStringSubmatch(command)
 			//params里第一个匹配到的是函数名
 			if Set(conn, params[1], params[2]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["get"].MatchString(command):
@@ -51,31 +55,31 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		case patterns["delete"].MatchString(command):
 			params := patterns["delete"].FindStringSubmatch(command)
 			if Delete(conn, params[1]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["addr"].MatchString(command):
 			params := patterns["addr"].FindStringSubmatch(command)
 			if Addr(conn, params[1], params[2]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["addl"].MatchString(command):
 			params := patterns["addl"].FindStringSubmatch(command)
 			if Addl(conn, params[1], params[2]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["popr"].MatchString(command):
 			params := patterns["popr"].FindStringSubmatch(command)
 			if Popr(conn, params[1]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["popl"].MatchString(command):
 			params := patterns["popl"].FindStringSubmatch(command)
 			if Popl(conn, params[1]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["lindex"].MatchString(command):
@@ -92,7 +96,7 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		case patterns["hset"].MatchString(command):
 			params := patterns["hset"].FindStringSubmatch(command)
 			if Hset(conn, params[1], params[2], params[3]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["hget"].MatchString(command):
@@ -102,7 +106,7 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		case patterns["sadd"].MatchString(command):
 			params := patterns["sadd"].FindStringSubmatch(command)
 			if Sadd(conn, params[1], params[2]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
 		case patterns["smembers"].MatchString(command):
@@ -112,11 +116,27 @@ func CommandsAssign(conn net.Conn, commands []string) {
 		case patterns["srem"].MatchString(command):
 			params := patterns["srem"].FindStringSubmatch(command)
 			if Srem(conn, params[1], params[2]) {
-				atomic.AddInt64(&datapersistence.Record, 1)
+				atomic.AddInt64(&Record, 1)
 			}
 			return
-		}
 
+		case patterns["SAVE"].MatchString(command):
+			SAVE(conn)
+			return
+		case patterns["RGSAVE"].MatchString(command):
+			RGSAVE(conn)
+			return
+		case patterns["save"].MatchString(command):
+			params := patterns["save"].FindStringSubmatch(command)
+			a, _ := strconv.Atoi(params[1])
+			b, _ := strconv.Atoi(params[2])
+			Stop <- true
+			go Save(a, b)
+			msg := utils.GenerateMsg("ok,save rule is changed")
+			conn.Write(msg)
+			return
+
+		}
 		Invalid(conn)
 		return
 	}

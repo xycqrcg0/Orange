@@ -1,4 +1,4 @@
-package data_persistence
+package command_handle
 
 import (
 	"log"
@@ -52,33 +52,37 @@ func Save(a int, b int) {
 	ticker := time.NewTicker(t)
 	defer ticker.Stop()
 
-	select {
-	case <-Stop:
+	for {
+		select {
+		case <-Stop:
+			//表示有新的Save规则了，这个要停了
+			return
+		case <-ticker.C:
+			log.Println("save ing")
+			//看看有没有b个键被修改（原子读取）
+			r := atomic.LoadInt64(&Record)
+			if r >= int64(b) {
+				//自动触发的话，如果当前有手动触发，就不进行了？要进行，等SAVE结束
+				//该自动触发的写入要不要对手动触发的SAVE进行阻塞呢？不阻塞，让它等等
 
-		//表示有新的Save规则了，这个要停了
-		return
-	case <-ticker.C:
-		//看看有没有b个键被修改（原子读取）
-		r := atomic.LoadInt64(&Record)
-		if r >= int64(b) {
-			//自动触发的话，如果当前有手动触发，就不进行了？要进行，等SAVE结束
-			//该自动触发的写入要不要对手动触发的SAVE进行阻塞呢？不阻塞，让它等等
+				//如果当前有SAVE正在进行，就停下等等
+				for atomic.LoadInt64(&SAVEFlag) != 0 {
+				}
 
-			//如果当前有SAVE正在进行，就停下等等
-			for atomic.LoadInt64(&SAVEFlag) != 0 {
+				atomic.AddInt64(&SaveF, 1)
+
+				if err := WriteODB(); err != nil {
+					//修改失败
+					log.Println("修改失败,err:", err)
+				} else {
+					//修改成功，改下Record的数据（其实这里的r要比实际写入的数据量要小一些，暂且不考虑这点，这只会导致写入比实际情况更频繁）
+					atomic.AddInt64(&Record, -1*r)
+				}
+
+				atomic.SwapInt64(&SaveF, 0)
+
+				log.Println("save success")
 			}
-
-			atomic.AddInt64(&SaveF, 1)
-
-			if err := WriteODB(); err != nil {
-				//修改失败
-				log.Println("修改失败,err:", err)
-			} else {
-				//修改成功，改下Record的数据（其实这里的r要比实际写入的数据量要小一些，暂且不考虑这点，这只会导致写入比实际情况更频繁）
-				atomic.AddInt64(&Record, -1*r)
-			}
-
-			atomic.SwapInt64(&SaveF, 0)
 		}
 	}
 }

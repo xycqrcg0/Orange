@@ -5,8 +5,8 @@ package models
 //ps:整体功能里似乎没有体现出使用SDS的作用吧()
 
 type SDS struct {
-	Length int64  //当前数据长度
-	Alloc  int64  //可存储数据长度
+	Length int    //当前数据长度
+	Alloc  int    //可存储数据长度
 	Buf    []byte //数据string
 }
 
@@ -14,8 +14,8 @@ func NewSDS(s []byte) *SDS {
 	//规则：if len(s) < 1024 -> 分配2*len(s)空间
 	//if len(s) > 1024 -> 分配len(s) + 1024 空间
 	l := len(s)
-	var length = int64(l)
-	var alloc int64
+	var length = l
+	var alloc int
 	if length < 1024 {
 		alloc = length * 2
 	} else {
