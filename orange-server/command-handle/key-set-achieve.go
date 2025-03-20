@@ -2,7 +2,6 @@ package command_handle
 
 import (
 	"hash/fnv"
-	"net"
 	"orange-server/data"
 	"orange-server/models"
 	protocalutils "orange-server/utils"
@@ -17,7 +16,7 @@ type OSet struct {
 	Value  []*models.SDS
 }
 
-func Sadd(conn net.Conn, key string, value string) bool {
+func Sadd(key string, value string) (msg []byte, o bool) {
 	valuesds := models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
@@ -26,9 +25,8 @@ func Sadd(conn net.Conn, key string, value string) bool {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)
 		if !ok {
-			msg := protocalutils.GenerateMsg("the key has been used by other type")
-			conn.Write(msg)
-			return false
+			msg = protocalutils.GenerateMsg("the key has been used by other type")
+			return msg, false
 		}
 
 		h := fnv.New32a()
@@ -38,9 +36,8 @@ func Sadd(conn net.Conn, key string, value string) bool {
 
 		if valueOSet.Value[hashed] != nil {
 			//因为set要求字符串是唯一的，那么当前这种情况是不被允许的（hash可以很快发现这个问题，这也是用哈希表实现的原因）
-			msg := protocalutils.GenerateMsg("value has been existed")
-			conn.Write(msg)
-			return false
+			msg = protocalutils.GenerateMsg("value has been existed")
+			return msg, false
 		} else {
 			//这就可以放了
 			valueOSet.Value[hashed] = valuesds
@@ -69,21 +66,19 @@ func Sadd(conn net.Conn, key string, value string) bool {
 		data.Database.PushIn(*keysds, newValueOSet)
 	}
 
-	msg := protocalutils.GenerateMsg("ok, 1 value has been inserted")
-	conn.Write(msg)
-	return true
+	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
+	return msg, true
 }
 
-func Smembers(conn net.Conn, key string) {
+func Smembers(key string) (msg []byte) {
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)
 		if !ok {
-			msg := protocalutils.GenerateMsg("the key has been used by other type")
-			conn.Write(msg)
-			return
+			msg = protocalutils.GenerateMsg("the key has been used by other type")
+			return msg
 		}
 		values := make([]string, 0)
 		for _, value := range valueOSet.Value {
@@ -91,26 +86,30 @@ func Smembers(conn net.Conn, key string) {
 				values = append(values, string(value.Buf[:value.Length]))
 			}
 		}
-		msg := protocalutils.GenerateMsg(values...)
-		conn.Write(msg)
-		return
+		msg = protocalutils.GenerateMsg(values...)
+		return msg
 	} else {
-		msg := protocalutils.GenerateMsg("key is not existed")
-		conn.Write(msg)
-		return
+		msg = protocalutils.GenerateMsg("key is not existed")
+		return msg
 	}
 }
 
-func Srem(conn net.Conn, key string, value string) bool {
+func Srem(key string, value string) (msg []byte, o bool) {
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)
 		if !ok {
-			msg := protocalutils.GenerateMsg("the key has been used by other type")
-			conn.Write(msg)
-			return false
+			msg = protocalutils.GenerateMsg("the key has been used by other type")
+			return msg, false
+		}
+
+		if valueOSet.Sum == 1 {
+			//那么这个元素删了就没值了，键值对是不是也要删了
+			node = nil
+			msg = protocalutils.GenerateMsg("ok, 1 value has been deleted")
+			return msg, true
 		}
 
 		h := fnv.New32a()
@@ -119,9 +118,8 @@ func Srem(conn net.Conn, key string, value string) bool {
 		hashed := int(h.Sum32()) % valueOSet.Length
 
 		if valueOSet.Value[hashed] == nil {
-			msg := protocalutils.GenerateMsg("value is not existed")
-			conn.Write(msg)
-			return false
+			msg = protocalutils.GenerateMsg("value is not existed")
+			return msg, false
 		}
 
 		valueOSet.Value[hashed] = nil
@@ -129,13 +127,11 @@ func Srem(conn net.Conn, key string, value string) bool {
 
 		//其实真要说这里也是要考虑一下length是不是要缩减()
 
-		msg := protocalutils.GenerateMsg("ok, 1 value has been deleted")
-		conn.Write(msg)
-		return true
+		msg = protocalutils.GenerateMsg("ok, 1 value has been deleted")
+		return msg, true
 
 	} else {
 		msg := protocalutils.GenerateMsg("key is not existed")
-		conn.Write(msg)
-		return false
+		return msg, false
 	}
 }

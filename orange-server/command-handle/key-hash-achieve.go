@@ -2,7 +2,6 @@ package command_handle
 
 import (
 	"hash/fnv"
-	"net"
 	"orange-server/data"
 	"orange-server/models"
 	protocalutils "orange-server/utils"
@@ -23,7 +22,7 @@ type OHash struct {
 	Value  []*OHashNode
 }
 
-func Hset(conn net.Conn, key string, field string, value string) bool {
+func Hset(key string, field string, value string) (msg []byte, o bool) {
 	fieldsds := models.NewSDS([]byte(field))
 	valuesds := models.NewSDS([]byte(value))
 	newHashNode := &OHashNode{Field: *fieldsds, Value: valuesds, Next: nil}
@@ -34,9 +33,8 @@ func Hset(conn net.Conn, key string, field string, value string) bool {
 		//该key存在，确定该value是hashNode切片(hash)类型
 		valueOHash, ok := node.Value.(*OHash)
 		if !ok {
-			msg := protocalutils.GenerateMsg("the key has been used by other type")
-			conn.Write(msg)
-			return false
+			msg = protocalutils.GenerateMsg("the key has been used by other type")
+			return msg, false
 		}
 		//准备把数据放入
 
@@ -56,9 +54,8 @@ func Hset(conn net.Conn, key string, field string, value string) bool {
 			}
 			if string(p.Field.Buf[:p.Field.Length]) == field {
 				//那么该field是重复了，报错
-				msg := protocalutils.GenerateMsg("field has been existed")
-				conn.Write(msg)
-				return false
+				msg = protocalutils.GenerateMsg("field has been existed")
+				return msg, false
 			}
 			//在末尾放上
 			p.Next = newHashNode
@@ -91,21 +88,19 @@ func Hset(conn net.Conn, key string, field string, value string) bool {
 		data.Database.PushIn(*keysds, newValueOHash)
 	}
 
-	msg := protocalutils.GenerateMsg("ok, 1 field-value has been inserted")
-	conn.Write(msg)
-	return true
+	msg = protocalutils.GenerateMsg("ok, 1 field-value has been inserted")
+	return msg, true
 }
 
-func Hget(conn net.Conn, key string, field string) {
+func Hget(key string, field string) (msg []byte) {
 	//先看看该key是否存在
 	node := data.Database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是hashNode切片(hash)类型
 		valueOHash, ok := node.Value.(*OHash)
 		if !ok {
-			msg := protocalutils.GenerateMsg("the key has been used by other type")
-			conn.Write(msg)
-			return
+			msg = protocalutils.GenerateMsg("the key has been used by other type")
+			return msg
 		}
 		h := fnv.New32a()
 		h.Write([]byte(field))
@@ -115,26 +110,22 @@ func Hget(conn net.Conn, key string, field string) {
 		p := valueOHash.Value[hashed]
 		if p != nil {
 			if string(p.Field.Buf[:p.Field.Length]) == field {
-				msg := protocalutils.GenerateMsg(string(p.Value.Buf[:p.Value.Length]))
-				conn.Write(msg)
-				return
+				msg = protocalutils.GenerateMsg(string(p.Value.Buf[:p.Value.Length]))
+				return msg
 			}
 			for p.Next != nil {
 				if string(p.Field.Buf[:p.Field.Length]) == field {
 					//找到了
-					msg := protocalutils.GenerateMsg(string(p.Value.Buf[:p.Value.Length]))
-					conn.Write(msg)
-					return
+					msg = protocalutils.GenerateMsg(string(p.Value.Buf[:p.Value.Length]))
+					return msg
 				}
 				p = p.Next
 			}
 		}
-		msg := protocalutils.GenerateMsg("field is not existed")
-		conn.Write(msg)
-		return
+		msg = protocalutils.GenerateMsg("field is not existed")
+		return msg
 	} else {
-		msg := protocalutils.GenerateMsg("key is not existed")
-		conn.Write(msg)
-		return
+		msg = protocalutils.GenerateMsg("key is not existed")
+		return msg
 	}
 }
