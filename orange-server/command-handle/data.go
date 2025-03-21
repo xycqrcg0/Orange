@@ -3,6 +3,7 @@ package command_handle
 import (
 	"hash/fnv"
 	"orange-server/models"
+	"sync"
 )
 
 //存储方式
@@ -23,11 +24,14 @@ type Base struct {
 	Length int //data数组长度
 	Max    int //最大位(目前只是摆设)
 	Data   []*ONode
+	Mtx    sync.Mutex
 }
 
-func (database *Base) PushIn(key models.SDS, value interface{}) bool {
+func (database *Base) PushIn(key models.SDS, value interface{}) {
 	//数组扩容规则：每当sum和length达到某个比值时，对data进行扩容
 	//先省略
+
+	//--------改成覆盖写--------
 
 	node := &ONode{Key: key, Value: value, Next: nil}
 
@@ -44,14 +48,17 @@ func (database *Base) PushIn(key models.SDS, value interface{}) bool {
 		p := database.Data[hashKey]
 		for p.Next != nil {
 			if string(p.Key.Buf) == newKey {
-				return false
+				//覆盖
+				p.Value = value
+				return
 			}
 			p = p.Next
 		}
 		if string(p.Key.Buf) == newKey {
 			//这就是两个一样的key了，是直接覆盖还是先返回报错呢
-			//报错
-			return false
+			//覆盖
+			p.Value = value
+			return
 		}
 		p.Next = node
 	} else {
@@ -61,7 +68,7 @@ func (database *Base) PushIn(key models.SDS, value interface{}) bool {
 	//这个++在将来支持并发时要注意并发问题
 	database.Sum++
 
-	return true
+	return
 }
 
 func (database *Base) DeleteD(byteKey []byte) bool {

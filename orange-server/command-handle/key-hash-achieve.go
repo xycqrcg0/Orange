@@ -32,38 +32,52 @@ func (database *Base) Hset(key string, field string, value string) (msg []byte, 
 		//该key存在，确定该value是hashNode切片(hash)类型
 		valueOHash, ok := node.Value.(*OHash)
 		if !ok {
-			msg = protocalutils.GenerateMsg("the key has been used by other type")
-			return msg, false
-		}
-		//准备把数据放入
-
-		//别忘了要做扩容的准备
-		//扩容操作暂放
-
-		//找到这个newHashNode该放哪里
-		h := fnv.New32a()
-		h.Write([]byte(field))
-		//要模一下别访问非法内存了
-		hashed := int(h.Sum32()) % valueOHash.Length
-		//解决哈希冲突
-		p := valueOHash.Value[hashed]
-		if p != nil {
-			for p.Next != nil {
-				p = p.Next
+			newValueOHash := &OHash{
+				Length: 128,
+				Sum:    0,
+				Value:  make([]*OHashNode, 128),
 			}
-			if string(p.Field.Buf[:p.Field.Length]) == field {
-				//那么该field是重复了，报错
-				msg = protocalutils.GenerateMsg("field has been existed")
-				return msg, false
-			}
-			//在末尾放上
-			p.Next = newHashNode
+
+			//把newHashNode放进newValueHash里,别忘了哈希时不要加上byte后面的空byte（直接用field吧）
+			h := fnv.New32a()
+			h.Write([]byte(field))
+			//要模一下别访问非法内存了
+			hashed := int(h.Sum32()) % newValueOHash.Length
+			//毕竟是新开的切片了，哈希冲突是不存在的
+			newValueOHash.Value[hashed] = newHashNode
+			newValueOHash.Sum++
+
+			node.Value = newValueOHash
 		} else {
-			//直接放
-			valueOHash.Value[hashed] = newHashNode
-		}
-		valueOHash.Sum++
+			//准备把数据放入
 
+			//别忘了要做扩容的准备
+			//扩容操作暂放
+
+			//找到这个newHashNode该放哪里
+			h := fnv.New32a()
+			h.Write([]byte(field))
+			//要模一下别访问非法内存了
+			hashed := int(h.Sum32()) % valueOHash.Length
+			//解决哈希冲突
+			p := valueOHash.Value[hashed]
+			if p != nil {
+				for p.Next != nil {
+					p = p.Next
+				}
+				if string(p.Field.Buf[:p.Field.Length]) == field {
+					//那么该field是重复了，报错
+					msg = protocalutils.GenerateMsg("field has been existed")
+					return msg, false
+				}
+				//在末尾放上
+				p.Next = newHashNode
+			} else {
+				//直接放
+				valueOHash.Value[hashed] = newHashNode
+			}
+			valueOHash.Sum++
+		}
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))

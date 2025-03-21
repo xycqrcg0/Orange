@@ -76,10 +76,13 @@ func AOFReread() (read []byte) {
 			} else if vv, ok := v.Value.(*OSet); ok {
 				for _, vvv := range vv.Value {
 					if vvv != nil {
-						value := string(vvv.Buf[:vvv.Length])
-						command := "sadd(" + key + "," + value + ")"
-						msg := utils.GenerateMsg(command)
-						read = append(read, msg...)
+						for vvv != nil {
+							value := string(vvv.Value.Buf[:vvv.Value.Length])
+							command := "sadd(" + key + "," + value + ")"
+							msg := utils.GenerateMsg(command)
+							read = append(read, msg...)
+							vvv = vvv.Next
+						}
 					}
 				}
 			}

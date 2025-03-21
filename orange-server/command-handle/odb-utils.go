@@ -146,8 +146,17 @@ func WriteODB() error {
 					if p != nil {
 						//index
 						writeBuf = append(writeBuf, intToByte(i)...)
-						//value
-						writeBuf = append(writeBuf, writeSDSIn(p)...)
+						q := p
+						for q != nil {
+							//value
+							writeBuf = append(writeBuf, writeSDSIn(q.Value)...)
+
+							if q.Next != nil {
+								writeBuf = append(writeBuf, start)
+							}
+							q = q.Next
+						}
+						writeBuf = append(writeBuf, end)
 					}
 				}
 			}
@@ -305,7 +314,7 @@ func ReadODB() error {
 					chashNode := &OHashNode{Field: *cfield, Value: civalue, Next: nil}
 
 					h.Next = chashNode
-					chashNode = h
+					h = h.Next
 
 					//又得到一个值
 					s--
@@ -321,7 +330,7 @@ func ReadODB() error {
 			p += 4
 			setLength, _ := byteToInt(file[p : p+4])
 			p += 4
-			setValue := make([]*models.SDS, setLength)
+			setValue := make([]*OSetNode, setLength)
 
 			s := setSum
 			for s > 0 {
@@ -335,7 +344,29 @@ func ReadODB() error {
 				svalue := GetSDS(svalueLength, svalueAlloc, file[p:p+svalueLength])
 				p += svalueLength
 
-				setValue[inSetIndex] = svalue
+				setNode := &OSetNode{Value: svalue, Next: nil}
+				se := setNode
+
+				for file[p] != end {
+					//是个链表
+					p++
+
+					ssvalueLength, _ := byteToInt(file[p : p+4])
+					p += 4
+					ssvalueAlloc, _ := byteToInt(file[p : p+4])
+					p += 4
+					ssvalue := GetSDS(ssvalueLength, ssvalueAlloc, file[p:p+ssvalueLength])
+					p += ssvalueLength
+
+					ssetNode := &OSetNode{Value: ssvalue, Next: nil}
+					se.Next = ssetNode
+					se = se.Next
+
+					//又得到一个值
+					s--
+				}
+
+				setValue[inSetIndex] = setNode
 				s--
 			}
 			value = &OSet{Length: setLength, Sum: setSum, Value: setValue}

@@ -8,10 +8,7 @@ import (
 func (database *Base) Set(key string, value string) (msg []byte, o bool) {
 	keysds := models.NewSDS([]byte(key))
 	valuesds := models.NewSDS([]byte(value))
-	if !database.PushIn(*keysds, valuesds) {
-		msg := protocalutils.GenerateMsg("key has existed")
-		return msg, false
-	}
+	database.PushIn(*keysds, valuesds)
 	msg = protocalutils.GenerateMsg("ok,1 key-value has been stored")
 	return msg, true
 }

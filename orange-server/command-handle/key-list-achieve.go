@@ -22,31 +22,28 @@ func (database *Base) Addr(key string, value string) (msg []byte, o bool) {
 	//先看看该key是否存在
 	node := database.Find([]byte(key))
 	if node != nil {
-		//该key存在，只要value是list类型，就插入，不然报错
+		//该key存在，只要value是list类型，就插入
 		valueList, ok := node.Value.(*OListNode)
 		if !ok {
-			msg = protocalutils.GenerateMsg("the key has been used by other type")
-			return msg, false
+			//覆盖
+			keysds := models.NewSDS([]byte(key))
+			database.PushIn(*keysds, newListNode)
+		} else {
+			//右侧插入
+			for valueList.Right != nil {
+				valueList = valueList.Right
+			}
+			//找到最右端了
+			newListNode.Left = valueList
+			valueList.Right = newListNode
 		}
-		//右侧插入
-		for valueList.Right != nil {
-			valueList = valueList.Right
-		}
-		//找到最右端了
-		newListNode.Left = valueList
-		valueList.Right = newListNode
-
-		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
-		return msg, true
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
-		//嘶，又把key已存在的情况排除了，pushIn返回的bool又没用了···
 		database.PushIn(*keysds, newListNode)
-
-		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
-		return msg, true
 	}
+	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
+	return msg, true
 }
 
 // Addl 左侧插入
@@ -57,34 +54,33 @@ func (database *Base) Addl(key string, value string) (msg []byte, o bool) {
 	//先看看该key是否存在
 	node := database.Find([]byte(key))
 	if node != nil {
-		//该key存在，只要value是list类型，就插入，不然报错
+		//该key存在，只要value是list类型，就插入
 		valueList, ok := node.Value.(*OListNode)
 		if !ok {
-			msg = protocalutils.GenerateMsg("the key has been used by other type")
-			return msg, false
-		}
-		//左侧插入
-		for valueList.Left != nil {
-			valueList = valueList.Left
-		}
-		//找到最左端了
-		newListNode.Right = valueList
-		valueList.Left = newListNode
+			//覆盖
+			keysds := models.NewSDS([]byte(key))
+			database.PushIn(*keysds, newListNode)
+		} else {
+			//左侧插入
+			for valueList.Left != nil {
+				valueList = valueList.Left
+			}
+			//找到最左端了
+			newListNode.Right = valueList
+			valueList.Left = newListNode
 
-		//修改一下database里存的值
-		node.Value = newListNode
-
-		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
-		return msg, true
+			//修改一下database里存的值
+			node.Value = newListNode
+		}
 	} else {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
 		//嘶，又把key已存在的情况排除了，pushIn返回的bool又没用了···
 		database.PushIn(*keysds, newListNode)
 
-		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
-		return msg, true
 	}
+	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
+	return msg, true
 }
 
 // Lindex 索引查询
