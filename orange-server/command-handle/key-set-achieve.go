@@ -2,7 +2,6 @@ package command_handle
 
 import (
 	"hash/fnv"
-	"orange-server/data"
 	"orange-server/models"
 	protocalutils "orange-server/utils"
 )
@@ -16,11 +15,11 @@ type OSet struct {
 	Value  []*models.SDS
 }
 
-func Sadd(key string, value string) (msg []byte, o bool) {
+func (database *Base) Sadd(key string, value string) (msg []byte, o bool) {
 	valuesds := models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)
@@ -63,16 +62,16 @@ func Sadd(key string, value string) (msg []byte, o bool) {
 		newValueOSet.Sum++
 
 		//把newValueOHash往database里放
-		data.Database.PushIn(*keysds, newValueOSet)
+		database.PushIn(*keysds, newValueOSet)
 	}
 
 	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
 	return msg, true
 }
 
-func Smembers(key string) (msg []byte) {
+func (database *Base) Smembers(key string) (msg []byte) {
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)
@@ -94,9 +93,9 @@ func Smembers(key string) (msg []byte) {
 	}
 }
 
-func Srem(key string, value string) (msg []byte, o bool) {
+func (database *Base) Srem(key string, value string) (msg []byte, o bool) {
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是OSet(set)类型
 		valueOSet, ok := node.Value.(*OSet)

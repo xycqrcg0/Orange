@@ -2,7 +2,6 @@ package command_handle
 
 import (
 	"log"
-	"orange-server/data"
 	"orange-server/models"
 	"orange-server/utils"
 	"os"
@@ -11,9 +10,6 @@ import (
 )
 
 //嘶，原来aof重写读的不是原来的aof文件，而是直接遍历数据库啊···
-
-// AOFStatus 标识AOF功能是否开启
-var AOFStatus int64
 
 var (
 	aofFilePath = "./orange.aof"
@@ -44,7 +40,7 @@ func AOFReread() (read []byte) {
 	//读的过程中database被修改了怎么办？从读开始，接下来接收到的写入命令都存起来，之后接到此read之后
 
 	read = make([]byte, 0)
-	for _, v := range data.Database.Data {
+	for _, v := range DB.Data {
 		for v != nil {
 			key := string(v.Key.Buf[:v.Key.Length])
 
@@ -147,7 +143,7 @@ func AOFRewrite() {
 		return
 	}
 	//写入
-	file.Write(AOFBuf[:len(AOFBuf)])
+	file.Write(AOFBuf)
 	file.Close()
 
 	mtx.Unlock()

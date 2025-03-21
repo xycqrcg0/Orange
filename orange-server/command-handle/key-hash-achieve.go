@@ -2,7 +2,6 @@ package command_handle
 
 import (
 	"hash/fnv"
-	"orange-server/data"
 	"orange-server/models"
 	protocalutils "orange-server/utils"
 )
@@ -22,13 +21,13 @@ type OHash struct {
 	Value  []*OHashNode
 }
 
-func Hset(key string, field string, value string) (msg []byte, o bool) {
+func (database *Base) Hset(key string, field string, value string) (msg []byte, o bool) {
 	fieldsds := models.NewSDS([]byte(field))
 	valuesds := models.NewSDS([]byte(value))
 	newHashNode := &OHashNode{Field: *fieldsds, Value: valuesds, Next: nil}
 
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是hashNode切片(hash)类型
 		valueOHash, ok := node.Value.(*OHash)
@@ -85,16 +84,16 @@ func Hset(key string, field string, value string) (msg []byte, o bool) {
 		newValueOHash.Sum++
 
 		//把newValueOHash往database里放
-		data.Database.PushIn(*keysds, newValueOHash)
+		database.PushIn(*keysds, newValueOHash)
 	}
 
 	msg = protocalutils.GenerateMsg("ok, 1 field-value has been inserted")
 	return msg, true
 }
 
-func Hget(key string, field string) (msg []byte) {
+func (database *Base) Hget(key string, field string) (msg []byte) {
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，确定该value是hashNode切片(hash)类型
 		valueOHash, ok := node.Value.(*OHash)

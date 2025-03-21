@@ -1,7 +1,6 @@
 package command_handle
 
 import (
-	"orange-server/data"
 	"orange-server/models"
 	protocalutils "orange-server/utils"
 )
@@ -16,12 +15,12 @@ type OListNode struct {
 //OList的存储，放进database的value是最左边的值
 
 // Addr 右侧插入
-func Addr(key string, value string) (msg []byte, o bool) {
+func (database *Base) Addr(key string, value string) (msg []byte, o bool) {
 	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，只要value是list类型，就插入，不然报错
 		valueList, ok := node.Value.(*OListNode)
@@ -43,7 +42,7 @@ func Addr(key string, value string) (msg []byte, o bool) {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
 		//嘶，又把key已存在的情况排除了，pushIn返回的bool又没用了···
-		data.Database.PushIn(*keysds, newListNode)
+		database.PushIn(*keysds, newListNode)
 
 		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		return msg, true
@@ -51,12 +50,12 @@ func Addr(key string, value string) (msg []byte, o bool) {
 }
 
 // Addl 左侧插入
-func Addl(key string, value string) (msg []byte, o bool) {
+func (database *Base) Addl(key string, value string) (msg []byte, o bool) {
 	newListNode := &OListNode{Left: nil, Right: nil}
 	newListNode.Content = models.NewSDS([]byte(value))
 
 	//先看看该key是否存在
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，只要value是list类型，就插入，不然报错
 		valueList, ok := node.Value.(*OListNode)
@@ -81,7 +80,7 @@ func Addl(key string, value string) (msg []byte, o bool) {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
 		//嘶，又把key已存在的情况排除了，pushIn返回的bool又没用了···
-		data.Database.PushIn(*keysds, newListNode)
+		database.PushIn(*keysds, newListNode)
 
 		msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
 		return msg, true
@@ -89,9 +88,9 @@ func Addl(key string, value string) (msg []byte, o bool) {
 }
 
 // Lindex 索引查询
-func Lindex(key string, index int) (msg []byte) {
+func (database *Base) Lindex(key string, index int) (msg []byte) {
 	//诶诶诶，就简单粗暴一点了
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		valueList, ok := node.Value.(*OListNode)
 		if !ok {
@@ -121,8 +120,8 @@ func Lindex(key string, index int) (msg []byte) {
 	return msg
 }
 
-func Popr(key string) (msg []byte, o bool) {
-	node := data.Database.Find([]byte(key))
+func (database *Base) Popr(key string) (msg []byte, o bool) {
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
 		valueList, ok := node.Value.(*OListNode)
@@ -137,7 +136,7 @@ func Popr(key string) (msg []byte, o bool) {
 			p := valueList.Left
 			if p == nil {
 				//嘶，那么这个值就是列表里唯一的值，删了
-				data.Database.Delete([]byte(key))
+				database.DeleteD([]byte(key))
 			} else {
 				p.Right = nil
 				node.Value = p
@@ -161,8 +160,8 @@ func Popr(key string) (msg []byte, o bool) {
 	}
 }
 
-func Popl(key string) (msg []byte, o bool) {
-	node := data.Database.Find([]byte(key))
+func (database *Base) Popl(key string) (msg []byte, o bool) {
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
 		valueList, ok := node.Value.(*OListNode)
@@ -175,7 +174,7 @@ func Popl(key string) (msg []byte, o bool) {
 		q := valueList.Right
 		if q == nil {
 			//嘶，那么这个值就是列表里唯一的值，删了
-			data.Database.Delete([]byte(key))
+			database.DeleteD([]byte(key))
 		} else {
 			q.Left = nil
 			node.Value = q
@@ -190,13 +189,13 @@ func Popl(key string) (msg []byte, o bool) {
 }
 
 // Lrange 从start开始读，到stop（stop数据不读取）
-func Lrange(key string, start int, stop int) (msg []byte) {
+func (database *Base) Lrange(key string, start int, stop int) (msg []byte) {
 	if start >= stop || start < 0 {
 		msg = protocalutils.GenerateMsg("invalid index")
 		return msg
 	}
 
-	node := data.Database.Find([]byte(key))
+	node := database.Find([]byte(key))
 	if node != nil {
 		//该key存在，再确定value是list类型
 		valueList, ok := node.Value.(*OListNode)

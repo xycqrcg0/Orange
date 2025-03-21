@@ -37,12 +37,12 @@ func handle(conn net.Conn) {
 			p = point
 			copy([]byte(commands[n-1]), buf)
 			//不全信息就先不处理
-			commandhandle.CommandsAssign(conn, commands[:n-1])
+			commandhandle.DB.CommandsAssign(conn, commands[:n-1], 0)
 			continue
 		}
 		//p置0
 		p = 0
-		commandhandle.CommandsAssign(conn, commands)
+		commandhandle.DB.CommandsAssign(conn, commands, 0)
 	}
 }
 

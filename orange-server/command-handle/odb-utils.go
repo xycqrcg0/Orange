@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"orange-server/data"
 	"orange-server/models"
 	"os"
 )
@@ -81,9 +80,9 @@ func WriteODB() error {
 	writeBuf := make([]byte, 0)
 
 	writeBuf = append(writeBuf, symbol...)
-	writeBuf = append(writeBuf, intToByte(data.Database.Sum)...)
-	writeBuf = append(writeBuf, intToByte(data.Database.Length)...)
-	for index, v := range data.Database.Data {
+	writeBuf = append(writeBuf, intToByte(DB.Sum)...)
+	writeBuf = append(writeBuf, intToByte(DB.Length)...)
+	for index, v := range DB.Data {
 		if v != nil {
 			//index
 			writeBuf = append(writeBuf, intToByte(index)...)
@@ -173,11 +172,11 @@ func WriteODB() error {
 }
 
 func ReadODB() error {
-	data.Database = &data.Base{
+	DB = &Base{
 		Sum:    0,
 		Length: 1024,
 		Max:    0,
-		Data:   make([]*data.ONode, 1024),
+		Data:   make([]*ONode, 1024),
 	}
 
 	file, err := os.ReadFile(odbFilePath)
@@ -192,18 +191,18 @@ func ReadODB() error {
 	}
 	p += 3
 
-	if data.Database.Sum, err = byteToInt(file[p : p+4]); err != nil {
+	if DB.Sum, err = byteToInt(file[p : p+4]); err != nil {
 		return err
 	}
 	p += 4
-	if data.Database.Length, err = byteToInt(file[p : p+4]); err != nil {
+	if DB.Length, err = byteToInt(file[p : p+4]); err != nil {
 		return err
 	}
 	p += 4
 
 	//如果Length不是1024，还要修改一下，扩容
 
-	i := data.Database.Sum
+	i := DB.Sum
 	for i > 0 {
 		index, _ := byteToInt(file[p : p+4])
 		p += 4
@@ -343,8 +342,8 @@ func ReadODB() error {
 
 		}
 
-		dataNode := &data.ONode{Key: *key, Value: value}
-		data.Database.Data[index] = dataNode
+		dataNode := &ONode{Key: *key, Value: value}
+		DB.Data[index] = dataNode
 		i--
 	}
 	return nil
