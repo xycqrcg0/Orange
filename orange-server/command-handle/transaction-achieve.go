@@ -13,7 +13,8 @@ func createDBCopy() (dbCp *Base) {
 	//把数据库遍历一遍，遍历的时候锁一下
 	DB.Mtx.Lock()
 	defer DB.Mtx.Unlock()
-	dbCp = &Base{Data: make([]*ONode, 1024), Length: 1024, Sum: 0}
+	dbCp = &Base{Data: make([]*ONode, 1024), Length: 1024}
+	dbCp.Sum = DB.Sum
 	for index, data := range DB.Data {
 		if data != nil {
 			vNode := &ONode{Next: nil}

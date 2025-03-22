@@ -99,6 +99,8 @@ func (database *Base) Hset(key string, field string, value string) (msg []byte, 
 
 		//把newValueOHash往database里放
 		database.PushIn(*keysds, newValueOHash)
+
+		database.Sum++
 	}
 
 	msg = protocalutils.GenerateMsg("ok, 1 field-value has been inserted")

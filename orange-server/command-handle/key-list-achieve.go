@@ -41,6 +41,8 @@ func (database *Base) Addr(key string, value string) (msg []byte, o bool) {
 		//那就新建这个key-value
 		keysds := models.NewSDS([]byte(key))
 		database.PushIn(*keysds, newListNode)
+
+		database.Sum++
 	}
 	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
 	return msg, true
@@ -78,6 +80,7 @@ func (database *Base) Addl(key string, value string) (msg []byte, o bool) {
 		//嘶，又把key已存在的情况排除了，pushIn返回的bool又没用了···
 		database.PushIn(*keysds, newListNode)
 
+		database.Sum++
 	}
 	msg = protocalutils.GenerateMsg("ok, 1 value has been inserted")
 	return msg, true
@@ -125,18 +128,14 @@ func (database *Base) Popr(key string) (msg []byte, o bool) {
 			msg = protocalutils.GenerateMsg("the key has been used by other type")
 			return msg, false
 		}
-		//右移
+
 		q := valueList.Right
 		if q == nil {
-			//也就是说当前这个就是最右边的量（害，麻烦，还要注意修改database里存储的值）
-			p := valueList.Left
-			if p == nil {
-				//嘶，那么这个值就是列表里唯一的值，删了
-				database.DeleteD([]byte(key))
-			} else {
-				p.Right = nil
-				node.Value = p
-			}
+			//嘶，那么这个值就是列表里唯一的值，删了
+			database.DeleteD([]byte(key))
+
+			database.Sum--
+
 			msg = protocalutils.GenerateMsg("ok, pop 1 value")
 			return msg, true
 		}
@@ -145,7 +144,7 @@ func (database *Base) Popr(key string) (msg []byte, o bool) {
 			q = q.Right
 		}
 		//此时q就是最右端的value，那就把从右数第二个的right指针置为nil
-		valueList.Right = nil
+		q.Right = nil
 
 		msg = protocalutils.GenerateMsg("ok, pop 1 value")
 		return msg, true
@@ -171,6 +170,8 @@ func (database *Base) Popl(key string) (msg []byte, o bool) {
 		if q == nil {
 			//嘶，那么这个值就是列表里唯一的值，删了
 			database.DeleteD([]byte(key))
+
+			database.Sum--
 		} else {
 			q.Left = nil
 			node.Value = q
