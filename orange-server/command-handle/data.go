@@ -65,9 +65,6 @@ func (database *Base) PushIn(key models.SDS, value interface{}) {
 		database.Data[hashKey] = node
 	}
 
-	//这个++在将来支持并发时要注意并发问题
-	database.Sum++
-
 	return
 }
 

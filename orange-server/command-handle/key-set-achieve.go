@@ -140,6 +140,7 @@ func (database *Base) Srem(key string, value string) (msg []byte, o bool) {
 		if valueOSet.Sum == 1 {
 			//那么这个元素删了就没值了，键值对是不是也要删了
 			node = nil
+			database.Sum--
 			msg = protocalutils.GenerateMsg("ok, 1 value has been deleted")
 			return msg, true
 		}
@@ -160,8 +161,6 @@ func (database *Base) Srem(key string, value string) (msg []byte, o bool) {
 		//其实真要说这里也是要考虑一下length是不是要缩减()
 
 		msg = protocalutils.GenerateMsg("ok, 1 value has been deleted")
-
-		database.Sum--
 
 		return msg, true
 

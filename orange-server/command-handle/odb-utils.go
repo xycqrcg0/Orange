@@ -10,9 +10,6 @@ import (
 	"os"
 )
 
-// ODBStatus 标识ODB功能是否开启
-var ODBStatus int64
-
 // Record 记录当前改动了几个数据,为save作参考
 var Record int64 = 0
 
@@ -84,80 +81,92 @@ func WriteODB() error {
 	writeBuf = append(writeBuf, intToByte(DB.Length)...)
 	for index, v := range DB.Data {
 		if v != nil {
+			//注意v也可能是链表···
 			//index
 			writeBuf = append(writeBuf, intToByte(index)...)
-			//key
-			writeBuf = append(writeBuf, writeSDSIn(&v.Key)...)
-			//value
 
-			if value, ok := v.Value.(*models.SDS); ok {
-				writeBuf = append(writeBuf, sds)
+			for v != nil {
+				//key
+				writeBuf = append(writeBuf, writeSDSIn(&v.Key)...)
+				//value
 
-				writeBuf = append(writeBuf, writeSDSIn(value)...)
+				if value, ok := v.Value.(*models.SDS); ok {
+					writeBuf = append(writeBuf, sds)
 
-			} else if value, ok := v.Value.(*OListNode); ok {
-				writeBuf = append(writeBuf, list)
+					writeBuf = append(writeBuf, writeSDSIn(value)...)
 
-				//writeBuf = append(writeBuf, start)
-				for value != nil {
-					writeBuf = append(writeBuf, writeSDSIn(value.Content)...)
-					//之间空一下
-					if value.Right == nil {
-						writeBuf = append(writeBuf, end)
-						break
+				} else if value, ok := v.Value.(*OListNode); ok {
+					writeBuf = append(writeBuf, list)
+
+					//writeBuf = append(writeBuf, start)
+					for value != nil {
+						writeBuf = append(writeBuf, writeSDSIn(value.Content)...)
+						//之间空一下
+						if value.Right == nil {
+							writeBuf = append(writeBuf, end)
+							break
+						}
+						writeBuf = append(writeBuf, 0x00)
+						value = value.Right
 					}
-					writeBuf = append(writeBuf, 0x00)
-					value = value.Right
+
+				} else if value, ok := v.Value.(*OHash); ok {
+					writeBuf = append(writeBuf, hash)
+
+					writeBuf = append(writeBuf, intToByte(value.Sum)...)
+					writeBuf = append(writeBuf, intToByte(value.Length)...)
+
+					for i, p := range value.Value {
+						if p != nil {
+							//index
+							writeBuf = append(writeBuf, intToByte(i)...)
+							q := p
+							for q != nil {
+								//field
+								writeBuf = append(writeBuf, writeSDSIn(&q.Field)...)
+								//value
+								writeBuf = append(writeBuf, writeSDSIn(q.Value)...)
+
+								if q.Next != nil {
+									writeBuf = append(writeBuf, start)
+								}
+								q = q.Next
+							}
+							writeBuf = append(writeBuf, end)
+						}
+					}
+
+				} else if value, ok := v.Value.(*OSet); ok {
+					writeBuf = append(writeBuf, set)
+
+					writeBuf = append(writeBuf, intToByte(value.Sum)...)
+					writeBuf = append(writeBuf, intToByte(value.Length)...)
+
+					for i, p := range value.Value {
+						if p != nil {
+							//index
+							writeBuf = append(writeBuf, intToByte(i)...)
+							q := p
+							for q != nil {
+								//value
+								writeBuf = append(writeBuf, writeSDSIn(q.Value)...)
+
+								if q.Next != nil {
+									writeBuf = append(writeBuf, start)
+								}
+								q = q.Next
+							}
+							writeBuf = append(writeBuf, end)
+						}
+					}
 				}
 
-			} else if value, ok := v.Value.(*OHash); ok {
-				writeBuf = append(writeBuf, hash)
-
-				writeBuf = append(writeBuf, intToByte(value.Sum)...)
-				writeBuf = append(writeBuf, intToByte(value.Length)...)
-
-				for i, p := range value.Value {
-					if p != nil {
-						//index
-						writeBuf = append(writeBuf, intToByte(i)...)
-						q := p
-						for q != nil {
-							//field
-							writeBuf = append(writeBuf, writeSDSIn(&q.Field)...)
-							//value
-							writeBuf = append(writeBuf, writeSDSIn(q.Value)...)
-
-							if q.Next != nil {
-								writeBuf = append(writeBuf, start)
-							}
-							q = q.Next
-						}
-						writeBuf = append(writeBuf, end)
-					}
-				}
-
-			} else if value, ok := v.Value.(*OSet); ok {
-				writeBuf = append(writeBuf, set)
-
-				writeBuf = append(writeBuf, intToByte(value.Sum)...)
-				writeBuf = append(writeBuf, intToByte(value.Length)...)
-
-				for i, p := range value.Value {
-					if p != nil {
-						//index
-						writeBuf = append(writeBuf, intToByte(i)...)
-						q := p
-						for q != nil {
-							//value
-							writeBuf = append(writeBuf, writeSDSIn(q.Value)...)
-
-							if q.Next != nil {
-								writeBuf = append(writeBuf, start)
-							}
-							q = q.Next
-						}
-						writeBuf = append(writeBuf, end)
-					}
+				if v.Next != nil {
+					writeBuf = append(writeBuf, start)
+					v = v.Next
+				} else {
+					writeBuf = append(writeBuf, end)
+					break
 				}
 			}
 		}
@@ -215,167 +224,184 @@ func ReadODB() error {
 	for i > 0 {
 		index, _ := byteToInt(file[p : p+4])
 		p += 4
-		keyLength, _ := byteToInt(file[p : p+4])
-		p += 4
-		keyAlloc, _ := byteToInt(file[p : p+4])
-		p += 4
-		key := GetSDS(keyLength, keyAlloc, file[p:p+keyLength])
-		p += keyLength
 
-		var value interface{}
-		p++
-		switch file[p-1] {
-		case sds:
-			valueLength, _ := byteToInt(file[p : p+4])
+		vDataNode := &ONode{}
+		vd := vDataNode
+		for {
+			keyLength, _ := byteToInt(file[p : p+4])
 			p += 4
-			valueAlloc, _ := byteToInt(file[p : p+4])
+			keyAlloc, _ := byteToInt(file[p : p+4])
 			p += 4
-			value = GetSDS(valueLength, valueAlloc, file[p:p+valueLength])
-			p += valueLength
+			key := GetSDS(keyLength, keyAlloc, file[p:p+keyLength])
+			p += keyLength
 
-		case list:
-			contentLength, _ := byteToInt(file[p : p+4])
-			p += 4
-			contentAlloc, _ := byteToInt(file[p : p+4])
-			p += 4
-			content := GetSDS(contentLength, contentAlloc, file[p:p+contentLength])
-			p += contentLength
-
-			ln := &OListNode{Content: content, Left: nil, Right: nil}
-			value = ln
-
-			for file[p] != end {
-				p++
-				nLength, _ := byteToInt(file[p : p+4])
-				p += 4
-				nAlloc, _ := byteToInt(file[p : p+4])
-				p += 4
-				n := GetSDS(nLength, nAlloc, file[p:p+nLength])
-				p += nLength
-
-				node := &OListNode{Content: n, Left: nil, Right: nil}
-				ln.Right = node
-				node.Left = ln
-
-				ln = node
-			}
+			var value interface{}
 			p++
-
-		case hash:
-			hashSum, _ := byteToInt(file[p : p+4])
-			p += 4
-			hashLength, _ := byteToInt(file[p : p+4])
-			p += 4
-			hashValue := make([]*OHashNode, hashLength)
-
-			s := hashSum
-			for s > 0 {
-				inHashIndex, _ := byteToInt(file[p : p+4])
-				p += 4
-
-				fieldLength, _ := byteToInt(file[p : p+4])
-				p += 4
-				fieldAlloc, _ := byteToInt(file[p : p+4])
-				p += 4
-				field := GetSDS(fieldLength, fieldAlloc, file[p:p+fieldLength])
-				p += fieldLength
-
+			switch file[p-1] {
+			case sds:
 				valueLength, _ := byteToInt(file[p : p+4])
 				p += 4
 				valueAlloc, _ := byteToInt(file[p : p+4])
 				p += 4
-				ivalue := GetSDS(valueLength, valueAlloc, file[p:p+valueLength])
+				value = GetSDS(valueLength, valueAlloc, file[p:p+valueLength])
 				p += valueLength
 
-				//得到一个值
-				s--
+			case list:
+				contentLength, _ := byteToInt(file[p : p+4])
+				p += 4
+				contentAlloc, _ := byteToInt(file[p : p+4])
+				p += 4
+				content := GetSDS(contentLength, contentAlloc, file[p:p+contentLength])
+				p += contentLength
 
-				hashNode := &OHashNode{Field: *field, Value: ivalue, Next: nil}
-				h := hashNode
+				ln := &OListNode{Content: content, Left: nil, Right: nil}
+				value = ln
 
 				for file[p] != end {
-					//是个链表
 					p++
-
-					cfieldLength, _ := byteToInt(file[p : p+4])
+					nLength, _ := byteToInt(file[p : p+4])
 					p += 4
-					cfieldAlloc, _ := byteToInt(file[p : p+4])
+					nAlloc, _ := byteToInt(file[p : p+4])
 					p += 4
-					cfield := GetSDS(cfieldLength, cfieldAlloc, file[p:p+cfieldLength])
-					p += cfieldLength
+					n := GetSDS(nLength, nAlloc, file[p:p+nLength])
+					p += nLength
 
-					cvalueLength, _ := byteToInt(file[p : p+4])
-					p += 4
-					cvalueAlloc, _ := byteToInt(file[p : p+4])
-					p += 4
-					civalue := GetSDS(cvalueLength, cvalueAlloc, file[p:p+cvalueLength])
-					p += cvalueLength
+					node := &OListNode{Content: n, Left: nil, Right: nil}
+					ln.Right = node
+					node.Left = ln
 
-					chashNode := &OHashNode{Field: *cfield, Value: civalue, Next: nil}
-
-					h.Next = chashNode
-					h = h.Next
-
-					//又得到一个值
-					s--
+					ln = node
 				}
 				p++
 
-				hashValue[inHashIndex] = hashNode
-			}
-			value = &OHash{Length: hashLength, Sum: hashSum, Value: hashValue}
-
-		case set:
-			setSum, _ := byteToInt(file[p : p+4])
-			p += 4
-			setLength, _ := byteToInt(file[p : p+4])
-			p += 4
-			setValue := make([]*OSetNode, setLength)
-
-			s := setSum
-			for s > 0 {
-				inSetIndex, _ := byteToInt(file[p : p+4])
+			case hash:
+				hashSum, _ := byteToInt(file[p : p+4])
 				p += 4
-
-				svalueLength, _ := byteToInt(file[p : p+4])
+				hashLength, _ := byteToInt(file[p : p+4])
 				p += 4
-				svalueAlloc, _ := byteToInt(file[p : p+4])
-				p += 4
-				svalue := GetSDS(svalueLength, svalueAlloc, file[p:p+svalueLength])
-				p += svalueLength
+				hashValue := make([]*OHashNode, hashLength)
 
-				setNode := &OSetNode{Value: svalue, Next: nil}
-				se := setNode
+				s := hashSum
+				for s > 0 {
+					inHashIndex, _ := byteToInt(file[p : p+4])
+					p += 4
 
-				for file[p] != end {
-					//是个链表
+					fieldLength, _ := byteToInt(file[p : p+4])
+					p += 4
+					fieldAlloc, _ := byteToInt(file[p : p+4])
+					p += 4
+					field := GetSDS(fieldLength, fieldAlloc, file[p:p+fieldLength])
+					p += fieldLength
+
+					valueLength, _ := byteToInt(file[p : p+4])
+					p += 4
+					valueAlloc, _ := byteToInt(file[p : p+4])
+					p += 4
+					ivalue := GetSDS(valueLength, valueAlloc, file[p:p+valueLength])
+					p += valueLength
+
+					//得到一个值
+					s--
+
+					hashNode := &OHashNode{Field: *field, Value: ivalue, Next: nil}
+					h := hashNode
+
+					for file[p] != end {
+						//是个链表
+						p++
+
+						cfieldLength, _ := byteToInt(file[p : p+4])
+						p += 4
+						cfieldAlloc, _ := byteToInt(file[p : p+4])
+						p += 4
+						cfield := GetSDS(cfieldLength, cfieldAlloc, file[p:p+cfieldLength])
+						p += cfieldLength
+
+						cvalueLength, _ := byteToInt(file[p : p+4])
+						p += 4
+						cvalueAlloc, _ := byteToInt(file[p : p+4])
+						p += 4
+						civalue := GetSDS(cvalueLength, cvalueAlloc, file[p:p+cvalueLength])
+						p += cvalueLength
+
+						chashNode := &OHashNode{Field: *cfield, Value: civalue, Next: nil}
+
+						h.Next = chashNode
+						h = h.Next
+
+						//又得到一个值
+						s--
+					}
 					p++
 
-					ssvalueLength, _ := byteToInt(file[p : p+4])
-					p += 4
-					ssvalueAlloc, _ := byteToInt(file[p : p+4])
-					p += 4
-					ssvalue := GetSDS(ssvalueLength, ssvalueAlloc, file[p:p+ssvalueLength])
-					p += ssvalueLength
-
-					ssetNode := &OSetNode{Value: ssvalue, Next: nil}
-					se.Next = ssetNode
-					se = se.Next
-
-					//又得到一个值
-					s--
+					hashValue[inHashIndex] = hashNode
 				}
+				value = &OHash{Length: hashLength, Sum: hashSum, Value: hashValue}
 
-				setValue[inSetIndex] = setNode
-				s--
+			case set:
+				setSum, _ := byteToInt(file[p : p+4])
+				p += 4
+				setLength, _ := byteToInt(file[p : p+4])
+				p += 4
+				setValue := make([]*OSetNode, setLength)
+
+				s := setSum
+				for s > 0 {
+					inSetIndex, _ := byteToInt(file[p : p+4])
+					p += 4
+
+					svalueLength, _ := byteToInt(file[p : p+4])
+					p += 4
+					svalueAlloc, _ := byteToInt(file[p : p+4])
+					p += 4
+					svalue := GetSDS(svalueLength, svalueAlloc, file[p:p+svalueLength])
+					p += svalueLength
+
+					setNode := &OSetNode{Value: svalue, Next: nil}
+					se := setNode
+
+					s--
+
+					for file[p] != end {
+						//是个链表
+						p++
+
+						ssvalueLength, _ := byteToInt(file[p : p+4])
+						p += 4
+						ssvalueAlloc, _ := byteToInt(file[p : p+4])
+						p += 4
+						ssvalue := GetSDS(ssvalueLength, ssvalueAlloc, file[p:p+ssvalueLength])
+						p += ssvalueLength
+
+						ssetNode := &OSetNode{Value: ssvalue, Next: nil}
+						se.Next = ssetNode
+						se = se.Next
+
+						//又得到一个值
+						s--
+					}
+					p++
+
+					setValue[inSetIndex] = setNode
+				}
+				value = &OSet{Length: setLength, Sum: setSum, Value: setValue}
+
 			}
-			value = &OSet{Length: setLength, Sum: setSum, Value: setValue}
 
+			dataNode := &ONode{Key: *key, Value: value}
+			vd.Next = dataNode
+			vd = vd.Next
+			i--
+
+			if file[p] == end {
+				p++
+				break
+			} else {
+				p++
+			}
 		}
 
-		dataNode := &ONode{Key: *key, Value: value}
-		DB.Data[index] = dataNode
-		i--
+		DB.Data[index] = vDataNode.Next
 	}
 	return nil
 }

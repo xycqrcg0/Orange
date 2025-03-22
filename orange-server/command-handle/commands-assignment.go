@@ -81,6 +81,9 @@ func (database *Base) WriteAssign(command string) (msg []byte, ok bool) {
 	switch true {
 	case WritePatterns["set"].MatchString(command):
 		params := WritePatterns["set"].FindStringSubmatch(command)
+		if params[1] == "autocommit" {
+			return
+		}
 		//params里第一个匹配到的是函数名
 		msg, ok = database.Set(params[1], params[2])
 
@@ -154,12 +157,12 @@ func (database *Base) CommandsAssign(conn net.Conn, commands []string) {
 		case PPatterns["odb"].MatchString(command):
 			params := PPatterns["odb"].FindStringSubmatch(command)
 			if params[1] == "on" {
-				atomic.SwapInt64(&ODBStatus, 1)
+				atomic.SwapInt64(&global.ODBStatus, 1)
 			} else {
-				//如果之前是开的关上自动触发的save
-				if atomic.LoadInt64(&ODBStatus) != 0 {
+				//如果之前是开的,关上自动触发的save
+				if atomic.LoadInt64(&global.ODBStatus) != 0 {
 					Stop <- true
-					atomic.SwapInt64(&ODBStatus, 0)
+					atomic.SwapInt64(&global.ODBStatus, 0)
 				}
 			}
 			msg = utils.GenerateMsg("ok,odb status has changed")

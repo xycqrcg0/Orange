@@ -5,8 +5,10 @@ import (
 	"io"
 	"log"
 	"net"
+	"orange-server/global"
 	"orange-server/models"
 	"orange-server/utils"
+	"sync/atomic"
 )
 
 func createDBCopy() (dbCp *Base) {
@@ -97,6 +99,12 @@ func Transaction(conn net.Conn) {
 			DB.Mtx.Lock()
 			for _, c := range wbuf {
 				DB.WriteAssign(c)
+				atomic.AddInt64(&Record, 1)
+				//AOF
+				if global.AOFStatus == 1 {
+					m := utils.GenerateMsg(c)
+					AOF(m)
+				}
 			}
 			DB.Mtx.Unlock()
 			msg := utils.GenerateMsg("OK, now transaction has been commited")

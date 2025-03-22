@@ -104,7 +104,6 @@ func AOF(msg []byte) {
 		return
 	}
 	//写入
-	log.Println(msg)
 	file.Write(msg)
 	file.Close()
 

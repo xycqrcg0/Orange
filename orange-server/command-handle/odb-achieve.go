@@ -3,6 +3,7 @@ package command_handle
 import (
 	"log"
 	"net"
+	"orange-server/global"
 	protocalutils "orange-server/utils"
 	"sync/atomic"
 	"time"
@@ -10,7 +11,7 @@ import (
 
 // SAVE 阻塞式保存
 func SAVE(conn net.Conn) {
-	if atomic.LoadInt64(&ODBStatus) == 0 {
+	if atomic.LoadInt64(&global.ODBStatus) == 0 {
 		msg := protocalutils.GenerateMsg("ODB is not enabled")
 		conn.Write(msg)
 		return
@@ -23,18 +24,22 @@ func SAVE(conn net.Conn) {
 		return
 	}
 
-	//再等等自动触发的SAVE
+	//再等等自动触发的save
 	for atomic.LoadInt64(&SaveF) != 0 {
 	}
 
 	//加“锁”
 	atomic.AddInt64(&SAVEFlag, 1)
 
+	r := atomic.LoadInt64(&Record)
+
 	if err := WriteODB(); err != nil {
 		msg := protocalutils.GenerateMsg("SAVE failure :" + err.Error())
 		conn.Write(msg)
 		return
 	}
+
+	atomic.AddInt64(&Record, -1*r)
 
 	//解“锁”
 	atomic.SwapInt64(&SAVEFlag, 0)
@@ -46,7 +51,7 @@ func SAVE(conn net.Conn) {
 
 // RGSAVE 非阻塞式保存
 func RGSAVE(conn net.Conn) {
-	if atomic.LoadInt64(&ODBStatus) == 0 {
+	if atomic.LoadInt64(&global.ODBStatus) == 0 {
 		msg := protocalutils.GenerateMsg("ODB is not enabled")
 		conn.Write(msg)
 		return
@@ -70,7 +75,6 @@ func Save(a int, b int) {
 			//表示有新的Save规则了，这个要停了
 			return
 		case <-ticker.C:
-			log.Println("save ing")
 			//看看有没有b个键被修改（原子读取）
 			r := atomic.LoadInt64(&Record)
 			if r >= int64(b) {
